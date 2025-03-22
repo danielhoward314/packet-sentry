@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Define an array to hold the name of each executable that builds successfully
+BUILD_ARRAY=()
+
+# Expect to run `go build` from root directory of the project
+ROOT_DIR=$(dirname "$(realpath "$0")")/..
+
+# Clean previous builds
+rm -rf "$ROOT_DIR/build/"
+mkdir -p "$ROOT_DIR/build"
+
+build_for_target() {
+  local GOOS="$1" GOARCH="$2"
+  local EXECUTABLE_NAME="packet_sentry_${GOOS}_${GOARCH}"
+  GOOS="${GOOS}" GOARCH="${GOARCH}" go build -o "$ROOT_DIR/build/$EXECUTABLE_NAME" "$ROOT_DIR/..."
+  if [ $? -ne 0 ]; then
+    echo "Build failed for GOOS=${GOOS} GOARCH=${GOARCH}"
+    exit 1
+  fi
+  BUILD_ARRAY+=("$ROOT_DIR/build/$EXECUTABLE_NAME")
+  echo "Build succeeded for GOOS=${GOOS} GOARCH=${GOARCH}. Executable: ${EXECUTABLE_NAME}"
+}
+
+validate_executable_format() {
+  local EXECUTABLE="$1"
+  local BASE_NAME
+  BASE_NAME=$(basename "$EXECUTABLE")
+  local OS_ARCH
+  IFS="_" read -r -a OS_ARCH <<< "$BASE_NAME"
+
+  local GOOS="${OS_ARCH[2]:=""}"
+  local GOARCH="${OS_ARCH[3]:=""}"
+
+  if [[ -z "$GOOS" || -z "$GOARCH" ]]; then
+    echo "Error: unable to get executable format and architecture to check from file name: ${EXECUTABLE}"
+    exit 1
+  fi
+
+  echo "Validating executable: ${BASE_NAME} with GOOS=${GOOS}, GOARCH=${GOARCH}"
+
+  if [[ "$GOOS" == "linux" ]]; then
+    local file_output
+    file_output=$(file "$EXECUTABLE")
+    if [[ "$file_output" != *"ELF"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid ELF binary"
+      exit 1
+    fi
+    if [[ "$GOARCH" == "amd64" && "$file_output" != *"x86-64"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid x86-64 ELF binary"
+      exit 1
+    fi
+    if [[ "$GOARCH" == "arm64" && "$file_output" != *"ARM aarch64"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid ARM aarch64 ELF binary"
+      exit 1
+    fi
+  fi
+
+  if [[ "$GOOS" == "darwin" ]]; then
+    local file_output
+    file_output=$(file "$EXECUTABLE")
+    if [[ "$file_output" != *"Mach-O"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid Mach-O binary"
+      exit 1
+    fi
+    if [[ "$GOARCH" == "amd64" && "$file_output" != *"x86_64"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid x86 Mach-O binary"
+      exit 1
+    fi
+    if [[ "$GOARCH" == "arm64" && "$file_output" != *"arm64"* ]]; then
+      echo "Error: ${EXECUTABLE} is not a valid arm64 Mach-O binary"
+      exit 1
+    fi
+  fi
+}
+
+usage() {
+  echo "Usage: $0 [GOOS] [GOARCH]"
+  echo "  GOOS: The target operating system <darwin|linux>."
+  echo "  GOARCH: The target architecture <amd64|arm64>."
+  echo "If no arguments are provided, builds all targets."
+  echo "If both arguments are provided, builds only for the specified target."
+  echo "Example: $0 darwin amd64"
+}
+
+# Validate input arguments
+if [ $# -eq 0 ]; then
+  echo "Building for all targets..."
+  build_for_target "darwin" "amd64"
+  build_for_target "darwin" "arm64"
+  build_for_target "linux" "amd64"
+  build_for_target "linux" "arm64"
+elif [ $# -eq 2 ]; then
+  if [[ "$1" == "windows" ]]; then
+    echo "Invalid GOOS: $1"
+    echo "Use scripts/build.ps1 for $1"
+    exit 1
+  fi
+  if [[ "$1" != "darwin" && "$1" != "linux" ]]; then
+    echo "Invalid GOOS: $1"
+    usage
+    exit 1
+  fi
+  if [[ "$2" != "amd64" && "$2" != "arm64" ]]; then
+    echo "Invalid GOARCH: $2"
+    usage
+    exit 1
+  fi
+  echo "Building for GOOS=${1} GOARCH=${2}..."
+  build_for_target "$1" "$2"
+else
+  echo "Invalid number of arguments."
+  usage
+  exit 1
+fi
+
+if [ ${#BUILD_ARRAY[@]} -eq 0 ]; then
+  echo "No builds were completed."
+  exit 1
+fi
+
+for EXECUTABLE in "${BUILD_ARRAY[@]}"; do
+    validate_executable_format "$EXECUTABLE"
+done
+
+echo "Build process completed."
