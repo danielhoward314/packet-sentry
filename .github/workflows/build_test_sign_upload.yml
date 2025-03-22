@@ -53,7 +53,7 @@ jobs:
 
           if [[ "${OS_NAME}" == "windows" ]]; then
             # Run Windows-specific build script
-            pwsh .\scripts\build.ps1 windows ${{ matrix.architecture }}
+            pwsh ./scripts/build.ps1 windows ${{ matrix.architecture }}
           else
             # Run Unix-specific build script
             ./scripts/build ${OS_NAME} ${{ matrix.architecture }}
