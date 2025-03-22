@@ -51,7 +51,7 @@ jobs:
 
           echo "OS_NAME=${OS_NAME}"
 
-          if [[ "${OS_NAME}" == "windows-latest" ]]; then
+          if [[ "${OS_NAME}" == "windows" ]]; then
             # Run Windows-specific build script
             pwsh .\scripts\build.ps1 windows ${{ matrix.architecture }}
           else
