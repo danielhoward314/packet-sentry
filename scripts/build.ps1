@@ -33,7 +33,8 @@ function validate_executable_format {
     )
 
     $BASE_NAME = [System.IO.Path]::GetFileName($EXECUTABLE)
-    $OS_ARCH = $BASE_NAME -split "_"
+    $BASE_NAME_WITHOUT_EXTENSION = [System.IO.Path]::GetFileNameWithoutExtension($BASE_NAME)
+    $OS_ARCH = $BASE_NAME_WITHOUT_EXTENSION -split "_"
 
     $GOOS = $OS_ARCH[2]
     $GOARCH = $OS_ARCH[3]
