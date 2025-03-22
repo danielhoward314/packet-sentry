@@ -41,20 +41,29 @@ validate_executable_format() {
 
   echo "Validating executable: ${BASE_NAME} with GOOS=${GOOS}, GOARCH=${GOARCH}"
 
+  local EXECUTABLE_FORMAT
+  local EXECUTABLE_ARCH
+
   if [[ "$GOOS" == "linux" ]]; then
     local file_output
     file_output=$(file "$EXECUTABLE")
     if [[ "$file_output" != *"ELF"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid ELF binary"
       exit 1
+    else
+        EXECUTABLE_FORMAT="ELF"
     fi
     if [[ "$GOARCH" == "amd64" && "$file_output" != *"x86-64"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid x86-64 ELF binary"
       exit 1
+    else
+        EXECUTABLE_ARCH="x86-64"
     fi
     if [[ "$GOARCH" == "arm64" && "$file_output" != *"ARM aarch64"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid ARM aarch64 ELF binary"
       exit 1
+    else
+        EXECUTABLE_ARCH="ARM aarch64"
     fi
   fi
 
@@ -64,16 +73,24 @@ validate_executable_format() {
     if [[ "$file_output" != *"Mach-O"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid Mach-O binary"
       exit 1
+    else
+        EXECUTABLE_FORMAT="Mach-O"
     fi
     if [[ "$GOARCH" == "amd64" && "$file_output" != *"x86_64"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid x86 Mach-O binary"
       exit 1
+    else
+        EXECUTABLE_ARCH="x86_64"
     fi
     if [[ "$GOARCH" == "arm64" && "$file_output" != *"arm64"* ]]; then
       echo "Error: ${EXECUTABLE} is not a valid arm64 Mach-O binary"
       exit 1
+    else
+      EXECUTABLE_ARCH="arm64"
     fi
   fi
+
+  echo "Valid ${EXECUTABLE_FORMAT} executable format and architecture ${EXECUTABLE_ARCH}"
 }
 
 usage() {

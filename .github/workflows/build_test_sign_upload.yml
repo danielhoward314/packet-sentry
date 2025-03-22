@@ -1,0 +1,50 @@
+name: Build, Test, Sign, and Upload packet-sentry
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: [1.24]
+        architecture: [amd64, arm64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+      - name: Set up Go environment variables
+        run: |
+          echo "GOARCH=${{ matrix.architecture }}" >> $GITHUB_ENV
+          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
+
+      - name: Build Go Binary for ${{ matrix.os }} ${{ matrix.architecture }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Run Windows-specific build script
+            pwsh .\scripts\build.ps1
+          else
+            # Run Unix-specific build script
+            ./scripts/build
+          fi
