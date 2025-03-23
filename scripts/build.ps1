@@ -17,7 +17,7 @@ function build_for_target {
     $env:GOOS = $GOOS
     $env:GOARCH = $GOARCH
     Write-Host "Building executable named $EXECUTABLE_NAME for $env:GOOS $env:GOARCH."
-    $buildResult = & "go" "build" "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\..."
+    $buildResult = & "go" "build" "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\cmd\agent"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed for GOOS=${GOOS} GOARCH=${GOARCH}"
         Write-Host "Error details:`n$buildResult"
