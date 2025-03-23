@@ -1,0 +1,108 @@
+#!/bin/bash
+
+logMessage() {
+    echo "$(date -u): $1" >>/var/log/packet-sentry-preinstall.log
+}
+
+showErrorDialog() {
+    local errorMessage="$1"
+    if [ -z "$errorMessage" ]; then
+        errorMessage="An unexpected error occurred. Please try again."
+    fi
+    osascript <<EOF
+tell app "System Events"
+    display dialog "${errorMessage}" with title "Error" buttons {"Close"} default button "Close"
+end tell
+EOF
+}
+
+logMessage "Executing pre-install steps..."
+installKey=""
+
+osascript <<EOF
+tell app "System Events"
+    display dialog "Welcome to the Packet Sentry installation wizard!" with title "Packet Sentry Installation" buttons {"Cancel", "Continue"} default button "Continue"
+end tell
+EOF
+
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to display welcome dialog via osascript."
+    showErrorDialog "The installation wizard failed to open."
+    exit 1
+fi
+
+# Prompt for the install key and validate it
+while [[ ${#installKey} -ne 10 ]]; do
+    if [[ -z "$installKey" ]]; then
+        message="Please enter your Packet Sentry install key:"
+    else
+        message="Error: Provided install key is invalid."
+    fi
+
+    logMessage "Prompting for install key..."
+    installKey=$(
+        osascript <<EOF
+            with timeout of (30 * 60) seconds
+                set dialogTitle to "Packet Sentry Install Key"
+                set dialogMessage to "${message}"
+                set myReply to text returned of (display dialog dialogMessage with title dialogTitle default answer "" buttons {"Cancel", "Continue"} default button 2)
+            end timeout
+EOF
+    )
+
+    if [ $? -ne 0 ]; then
+        logMessage "Error: Failed to get install key via osascript."
+        showErrorDialog "The installation wizard failed to collect the install key."
+        exit 1
+    fi
+
+    if [[ ${#installKey} -ne 10 ]]; then
+        logMessage "Invalid install key length: ${#installKey}. Must be 10 characters."
+        showErrorDialog "Invalid install key."
+    fi
+done
+
+logMessage "Valid install key received."
+
+# Create the bootstrap file with the install key
+agentInstallDir="/opt/packet-sentry"
+if [ ! -d "$agentInstallDir" ]; then
+    logMessage "Creating directory: $agentInstallDir"
+    mkdir -p "$agentInstallDir"
+    if [ $? -ne 0 ]; then
+        logMessage "Failed to create directory: $agentInstallDir"
+        showErrorDialog "The installation wizard failed to prepare the installation directory."
+        exit 1
+    fi
+fi
+
+bootstrapFile="${agentInstallDir}/agentBootstrap.json"
+
+logMessage "Creating bootstrap file at ${bootstrapFile}..."
+cat <<-EOF >"${bootstrapFile}"
+{
+    "installKey": "${installKey}"
+}
+EOF
+
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to write to bootstrap file."
+    showErrorDialog "The installation wizard failed to save the install key."
+    exit 1
+fi
+
+logMessage "Successfully wrote to bootstrap file."
+
+osascript <<EOF
+tell app "System Events"
+    display dialog "Install key validated successfully!" with title "Success" buttons {"Finish"} default button "Finish"
+end tell
+EOF
+
+if [ $? -ne 0 ]; then
+    # Log without exiting non-zero, since it is a non-fatal error that only affects UX.
+    logMessage "Error: Failed to display finish dialog via osascript."
+fi
+
+logMessage "Pre-install steps complete."
+exit 0

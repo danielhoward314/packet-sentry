@@ -1,0 +1,79 @@
+#!/bin/bash
+
+logMessage() {
+    echo "$(date -u): $1" >>/var/log/packet-sentry-postinstall.log
+}
+
+logMessage "Executing post-install steps..."
+
+agentInstallDir="/opt/packet-sentry"
+bootstrapFile="${agentInstallDir}/agentBootstrap.json"
+
+logMessage "Validating permissions and ownership for ${agentInstallDir}..."
+owner=$(stat -f "%Su" "${agentInstallDir}")
+group=$(stat -f "%Sg" "${agentInstallDir}")
+if [[ "$owner" != "root" || "$group" != "wheel" ]]; then
+    logMessage "Warning: Ownership of ${agentInstallDir} is not root:wheel, correcting it."
+    chown -R root:wheel "${agentInstallDir}"
+    if [ $? -ne 0 ]; then
+        logMessage "Error: Failed to set ownership for ${agentInstallDir}."
+        exit 1
+    fi
+else
+    logMessage "Ownership for ${agentInstallDir} is correct."
+fi
+
+logMessage "Locking down ${agentInstallDir} directory permissions..."
+chmod -R 700 "${agentInstallDir}"
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to set restrictive permissions for ${agentInstallDir}."
+    exit 1
+fi
+
+logMessage "Making directories executable..."
+find "${agentInstallDir}" -type d -exec chmod u+x {} +
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to make directories executable."
+    exit 1
+fi
+
+logMessage "Granting _securityagent (uid 92) permissions..."
+chown -R root:92 "${agentInstallDir}"
+chmod -R g+rwx "${agentInstallDir}"
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to set permissions for _securityagent."
+    exit 1
+fi
+
+logMessage "Granting execute permissions to the agent binary..."
+chmod u+x "${agentInstallDir}/bin/packet-sentry-agent"
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to grant execute permissions to the agent binary."
+    exit 1
+fi
+
+logMessage "Removing old property list..."
+rm -f "/Library/LaunchDaemons/com.danielhoward314.packet-sentry-agent.plist"
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to remove old property list."
+    exit 1
+fi
+
+logMessage "Installing agent daemon..."
+cp -f "${agentInstallDir}/com.danielhoward314.packet-sentry-agent.plist" /Library/LaunchDaemons
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to copy the property list to /Library/LaunchDaemons."
+    exit 1
+fi
+
+logMessage "Loading agent daemon..."
+/bin/launchctl load "/Library/LaunchDaemons/com.danielhoward314.packet-sentry-agent.plist"
+if [ $? -ne 0 ]; then
+    logMessage "Error: Failed to load the agent daemon with launchctl."
+    exit 1
+fi
+
+logMessage "Successfully loaded agent daemon with launchctl."
+
+logMessage "Post-install steps complete."
+exit 0

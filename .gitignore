@@ -1,5 +1,7 @@
 # Output directory of build scripts
 build/
+macos-installer/build
+macos-installer/package/*.pkg
 
 # Binaries for programs and plugins
 *.exe

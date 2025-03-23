@@ -5,8 +5,8 @@ set -euo pipefail
 # Define an array to hold the name of each executable that builds successfully
 BUILD_ARRAY=()
 
-# Expect to run `go build` from root directory of the project
-ROOT_DIR=$(dirname "$(realpath "$0")")/..
+# Expect to run this build script from root directory of the project
+ROOT_DIR=$(pwd)
 
 # Clean previous builds
 rm -rf "$ROOT_DIR/build/"
@@ -15,7 +15,7 @@ mkdir -p "$ROOT_DIR/build"
 build_for_target() {
   local GOOS="$1" GOARCH="$2"
   local EXECUTABLE_NAME="packet_sentry_${GOOS}_${GOARCH}"
-  GOOS="${GOOS}" GOARCH="${GOARCH}" go build -o "$ROOT_DIR/build/$EXECUTABLE_NAME" "$ROOT_DIR/..."
+  GOOS="${GOOS}" GOARCH="${GOARCH}" go build -o "$ROOT_DIR/build/$EXECUTABLE_NAME" "$ROOT_DIR/cmd/agent"
   if [ $? -ne 0 ]; then
     echo "Build failed for GOOS=${GOOS} GOARCH=${GOARCH}"
     exit 1

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.danielhoward314.packet-sentry-agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/packet-sentry/bin/packet-sentry-agent</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+
+    <key>StandardErrorPath</key>
+    <string>/var/log/packet-sentry-agent.err</string>
+
+    <key>StandardOutPath</key>
+    <string>/var/log/packet-sentry-agent.out</string>
+
+    <key>UserName</key>
+    <string>root</string>
+    <key>GroupName</key>
+    <string>wheel</string>
+  </dict>
+</plist>
