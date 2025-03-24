@@ -1,4 +1,18 @@
-#!/bin/bash
-echo "Pre-removal: Stopping Packet Sentry Agent..."
-systemctl stop packet-sentry-agent || true
-systemctl disable packet-sentry-agent || true
+#!/bin/sh
+
+set -e
+
+BIN_FILE="{{ .BinFile }}"
+SERVICE_FILE="/etc/systemd/system/packet-sentry-agent.service"
+INSTALL_DIR="{{ .InstallDir }}"
+
+# Stop and disable the systemd service
+systemctl stop packet-sentry-agent.service || true
+systemctl disable packet-sentry-agent.service || true
+rm -f "$SERVICE_FILE"
+
+# Remove installed files
+rm -rf "$INSTALL_DIR"
+
+# Reload systemd to ensure all services are cleared
+systemctl daemon-reload
