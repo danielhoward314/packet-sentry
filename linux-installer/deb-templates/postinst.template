@@ -1,0 +1,32 @@
+#!/bin/bash
+echo "Post-installation: Setting up Packet Sentry Agent..."
+
+# Prompt user for install key if not provided
+if [ ! -f "{{ .BootstrapFile }}" ]; then
+    echo "Please enter the install key:"
+
+    # Save current value of shell history file to temp variable
+    OLD_HISTFILE="${HISTFILE}"
+
+    # Unset HISTFILE temporarily
+    HISTFILE=
+
+    # Execute the commands that should be excluded from history
+    read -s -r install_key
+    cat <<-EOF > "{{ .BootstrapFile }}"
+    {
+        "installKey": "$install_key"
+    }
+    EOF
+
+    # Restore HISTFILE to its original value
+    HISTFILE="${OLD_HISTFILE}"
+
+    chmod 600 "{{ .BootstrapFile }}"
+    echo "Install key has been saved."
+fi
+
+# Start the service
+systemctl daemon-reload
+systemctl enable packet-sentry-agent
+systemctl start packet-sentry-agent

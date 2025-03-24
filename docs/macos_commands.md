@@ -1,18 +1,18 @@
-## macOS Commands
+# macOS Commands
 
-### Build the Go executable
+## Build the Go executable
 
 ```bash
 ./scripts/build darwin <amd64|arm64>
 ```
 
-### Build macOS Installer
+## Build macOS Installer
 
 ```bash
 ./macos-installer/build-installer.sh <version> <amd64|arm64>
 ```
 
-### Inspect the macOS installer pkg
+## Inspect the macOS installer pkg
 
 ```bash
 cd ./macos-installer/package
@@ -34,14 +34,14 @@ ls bin/
 cd ../../../..
 ```
 
-### Install the macOS installer pkg
+## Install the macOS installer pkg
 
 ```bash
 # this method bypasses the code signing and notarization checks
 sudo installer -pkg ./macos-installer/package/packet-sentry-agent.pkg -target /
 ```
 
-### Debug the macOS installation
+## Debug the macOS installation
 
 ```bash
 less +F /var/log/install.log
@@ -56,7 +56,7 @@ ps -p <pid> -o pid,uid,gid,%cpu,%mem,etime,args,args
 sudo lsof -p <pid>
 ```
 
-### Clean up the macOS installation commands
+## Clean up the macOS installation commands
 
 ```bash
 rm macos-installer/package/agent.pkg macos-installer/package/packet-sentry-agent.pkg

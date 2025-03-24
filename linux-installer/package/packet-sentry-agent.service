@@ -1,0 +1,22 @@
+[Unit]
+Description=Packet Sentry Agent
+After=network.target
+
+[Service]
+ExecStart=/opt/packet-sentry/bin/packet-sentry-agent
+Restart=always
+User=root
+Group=root
+LimitMEMLOCK=infinity
+LimitNOFILE=65535
+AmbientCapabilities=CAP_SYS_ADMIN CAP_NET_ADMIN CAP_NET_RAW
+WorkingDirectory=/opt/packet-sentry
+Environment=GODEBUG=madvdontneed=1
+
+# Ensure it runs as a background process
+Type=simple
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target

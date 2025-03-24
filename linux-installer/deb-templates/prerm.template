@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "Pre-removal: Stopping Packet Sentry Agent..."
+systemctl stop packet-sentry-agent || true
+systemctl disable packet-sentry-agent || true
