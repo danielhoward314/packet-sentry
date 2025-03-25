@@ -53,19 +53,18 @@ jobs:
       - name: Build Go Binary and Installer for ${{ matrix.os }} ${{ matrix.architecture }}
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]
             ./scripts/build linux ${{ matrix.architecture }}
-            # TODO: use git to get version
             go run ./linux-installer/main.go 1.0.0 ${{ matrix.architecture }}
             # TODO: linux installer validation
-          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             ./scripts/build darwin ${{ matrix.architecture }}
             # TODO: use git to get version
             ./macos-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
             ./macos-installer/validate-installer 1.0.0 ${{ matrix.architecture }}
-
           else
             pwsh ./scripts/build.ps1 ${{ matrix.architecture }}
+            # TODO: use git to get version
             # TODO: ensure WiX Toolset is installed before we can build the installer
             # TODO: windows installer validation
           fi
