@@ -54,6 +54,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.architecture }}-${{ github.ref_name }}-go-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Set up Go environment variables
+        shell: bash
         run: |
           echo "GOARCH=${{ matrix.architecture }}" >> $GITHUB_ENV
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
