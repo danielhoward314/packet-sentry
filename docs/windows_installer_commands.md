@@ -47,8 +47,32 @@ msiexec /i bin\Debug\QuickStart.msi /l*v install_log.txt
 msiexec /x bin\Debug\QuickStart.msi /l*v uninstall_log.txt
 ```
 
-## Build the Windows MSI Installer
+## WiX/MSI Development
 
+The [wixedit](https://wixedit.github.io/) GUI tool is useful while editing the WiX XML. It shows the UI and install execution sequences, you can see what the dialogs actually look like, and it has the metadata about custom actions.
+
+This project's `Product.wxs` is pretty simple and borrows heavily from the WiX samples. The WiX XML is a declarative expression of the desired state of:
+
+- installed directories (`<Directory>.../<Directory>`)
+- files (`<Component><File>...</File></Component>`)
+- a sequence of UI elements as users progress through the dialogs (`<InstallUISequence>...</InstallUISequence>`)
+- an install sequence where you can fire custom actions (`<InstallExecuteSequence>...</InstallExecuteSequence>`)
+- the appearance of UI elements (`<UI>...</UI>`) which can also define additional sequencing and publish properties for use by custom actions
+
+The `Id` attribute of XML is used to connect things in the files:
+
+- the `Component` and `ComponentRef` share the `PacketSentryServiceComponent` value for their `Id`
+- the `Binary` has the `InstallActions` value for its `Id` that ties it to the `BinaryKey` of the `CustomAction`
+
+The `ServiceInstall` and `ServiceControl` are WiX built-ins for defining a Windows Service that can be managed with `sc.exe`.
+
+The custom actions have the property `Execute="immediate"` or `Execute="deferred"` where the former doesn't have elevations and the latter do elevate.
+
+The `<Property Id="INSTALLKEY" Secure="yes" />` is published by the `Control` within the `PacketSentryInstallKeyDlg` dialog. The `CustomActionWriteInstallKey` custom action uses the property.
+
+The installer build script (`.\windows-installer\build-installer.ps1`) invokes `candle.exe` and `light.exe` from the WiX Toolset. The former compiles the `.wxs` files into `.wixobj` that `light.exe` uses to build the MSI. You can pass arguments into `candle.exe` with syntax like `-dVersion="${version}"` which become available in the `.wxs` files as variables for dynamic values with syntax like `$(var.Version)`.
+
+## Build the Windows MSI Installer
 
 ```PowerShell
 # Requires an admin session. Also, you may need to run cmdlet `Set-ExecutionPolicy <PolicyValue>` to be able execute a script.
@@ -60,9 +84,47 @@ The error `light.exe : warning LGHT1032 : Unable to reset acls on destination fi
 ## Inspect the Windows MSI Installer (on Windows)
 
 The SDK has some tools for this. Download [here](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/).
-Note the installation path in the install wizard (e.g. `C:\Program Files (x86)\Windows Kits\10\`). Only the MSI Tools are needed.
+Note the installation path in the install wizard (e.g. `C:\Program Files (x86)\Windows Kits\10\`). Orca is a GUI-based tool for inspecting MSIs; you have to install it from a directory within the SDK, similar to a path like `"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\Orca-x86_en-us.msi"`.
+
+```PowerShell
+ msiexec /a "<absolute-path-to-root-of-project>\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi"  /qb TARGETDIR=C:\extracted
+
+Get-ChildItem -Path C:\extracted -Filter "*.exe" -Recurse
+Get-AuthenticodeSignature <msi>
+```
 
 ## Inspect the Windows MSI Installer (on Unix)
+
+Install `msitools` and `cabextract`.
+
+```bash
+# Ubuntu
+sudo apt update
+sudo apt install msitools
+sudo apt install cabextract
+
+# macOS
+brew install msitools
+brew install cabextract
+```
+
+Inspect the .msi:
+
+```bash
+msiinfo tables <msi>
+msiinfo streams <msi>
+mkdir msiextracted
+msiextract --directory msiextracted/
+# should have directory structure that would be expected upon install: /'Program Files'/PacketSentry/packet_sentry.exe
+ls -R msiextracted
+#   -t, --tables -s, --streams -S, --signature -d DIR  Dump to given directory DIR
+msidump -t -s -S -d msidumped <msi>
+ls -R msidumped
+mkdir cabextracted
+cabextract -d cabextracted msidumped/_Streams/packet_sentry.cab
+# similar output just doing it on the msi directly
+cabextract -l <msi>
+```
 
 ## Install the Windows MSI
 
