@@ -134,13 +134,15 @@ cabextract -l <msi>
 
 ## Install the Windows MSI
 
-Double click it, or use msiexec (the extra arguments are to write verbose logs to the file):
+Double click it, or use msiexec:
 
 ```PowerShell
-msiexec /i "C:\Users\dhoward\Desktop\scratch\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi" /L*v "C:\Users\dhoward\Desktop\scratch\install.log"
+msiexec /i "C:\Users\dhoward\Desktop\scratch\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi"
 ```
 
 ## Debug the installation
+
+Use msiexec with verbose logging written to a log file:
 
 ```PowerShell
  msiexec /i "<absolute-path-to-root-of-project>\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi" /L*v "<absolute-path-to-root-of-project>\install.log"
