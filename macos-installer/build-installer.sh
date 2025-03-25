@@ -43,9 +43,6 @@ chmod +x "$ROOT_DIR/macos-installer/build/opt/packet-sentry/bin/packet-sentry-ag
 
 pushd "$ROOT_DIR/macos-installer/package"
 
-# Clean up previous build artifacts.
-rm distribution.xml
-
 # Copy the template to distribution.xml
 cp distribution.xml.template distribution.xml
 # Use sed to replace hard-coded version in the template with the actual version
