@@ -11,7 +11,7 @@ Windows:
 Linux (must have installed PowerShell first):
 
 ```bash
-pwsh # should launch a new shell
+pwsh # should launch a new PowerShell process
 ```
 
 ```PowerShell
