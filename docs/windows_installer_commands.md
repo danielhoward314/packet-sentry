@@ -72,6 +72,12 @@ The `<Property Id="INSTALLKEY" Secure="yes" />` is published by the `Control` wi
 
 The installer build script (`.\windows-installer\build-installer.ps1`) invokes `candle.exe` and `light.exe` from the WiX Toolset. The former compiles the `.wxs` files into `.wixobj` that `light.exe` uses to build the MSI. You can pass arguments into `candle.exe` with syntax like `-dVersion="${version}"` which become available in the `.wxs` files as variables for dynamic values with syntax like `$(var.Version)`.
 
+The GUIDs are generated:
+
+```PowerShell
+[guid]::NewGuid()
+```
+
 ## Build the Windows MSI Installer
 
 ```PowerShell
@@ -128,7 +134,11 @@ cabextract -l <msi>
 
 ## Install the Windows MSI
 
-Double click it.
+Double click it, or use msiexec (the extra arguments are to write verbose logs to the file):
+
+```PowerShell
+msiexec /i "C:\Users\dhoward\Desktop\scratch\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi" /L*v "C:\Users\dhoward\Desktop\scratch\install.log"
+```
 
 ## Debug the installation
 
