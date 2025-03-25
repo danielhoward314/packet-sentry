@@ -31,14 +31,14 @@ jobs:
           echo "go-build=$(go env GOCACHE)" >> $GITHUB_ENV
           echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_ENV
 
-      # Cache go build cache, used to speedup go test
+      # Cache go build cache
       - name: Go Build Cache
         uses: actions/cache@v3
         with:
           path: ${{ env.go-build }}
           key: ${{ runner.os }}-${{ matrix.architecture }}-${{ github.ref_name }}-go-build-${{ hashFiles('**/go.sum') }}
 
-      # Cache go mod cache, used to speedup builds
+      # Cache go mod cache
       - name: Go Mod Cache
         uses: actions/cache@v3
         with:
@@ -58,14 +58,14 @@ jobs:
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             OS_NAME="darwin"
           else
-            OS_NAME="windows"  # For windows-latest, keep it as is
+            OS_NAME="windows"
           fi
 
           echo "OS_NAME=${OS_NAME}"
 
           if [[ "${OS_NAME}" == "windows" ]]; then
             # Run Windows-specific build script
-            pwsh ./scripts/build.ps1 windows ${{ matrix.architecture }}
+            pwsh ./scripts/build.ps1 ${{ matrix.architecture }}
           else
             # Run Unix-specific build script
             ./scripts/build ${OS_NAME} ${{ matrix.architecture }}

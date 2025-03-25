@@ -1,4 +1,4 @@
-# macOS Commands
+# macOS Installer Commands
 
 ## Build the Go executable
 
@@ -56,7 +56,7 @@ ps -p <pid> -o pid,uid,gid,%cpu,%mem,etime,args,args
 sudo lsof -p <pid>
 ```
 
-## Clean up the macOS installation commands
+## Clean up the macOS installation
 
 ```bash
 rm macos-installer/package/agent.pkg macos-installer/package/packet-sentry-agent.pkg

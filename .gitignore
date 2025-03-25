@@ -5,6 +5,10 @@ macos-installer/package/*.pkg
 linux-installer/build
 linux-installer/packet-sentry-agent_*.deb
 linux-installer/packet-sentry-agent_*.rpm
+windows-installer/*.wixobj
+windows-installer/*.wixpdb
+windows-installer/*.msi
+windows-installer/bin
 
 # Binaries for programs and plugins
 *.exe

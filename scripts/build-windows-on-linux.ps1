@@ -9,8 +9,8 @@ $SCRIPTS_DIR = (Get-Item -LiteralPath $MyInvocation.MyCommand.Path).DirectoryNam
 $ROOT_DIR = (Get-Item -Path (Join-Path $SCRIPTS_DIR "..")).FullName
 
 # Clean previous builds
-Remove-Item -Recurse -Force "$ROOT_DIR\build" -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path "$ROOT_DIR\build" | Out-Null
+Remove-Item -Recurse -Force "$ROOT_DIR/build" -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path "$ROOT_DIR/build" | Out-Null
 
 function build_for_target {
     param (
@@ -22,28 +22,28 @@ function build_for_target {
     $env:GOARCH = $GOARCH
 
     Write-Host "Building executable: $EXECUTABLE_NAME for $GOOS $GOARCH..."
-    $buildResult = & "go" "build" "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\cmd\agent"
-
+    $buildResult = & "go" "build" "-o" "$ROOT_DIR/build/$EXECUTABLE_NAME" "$ROOT_DIR/cmd/agent"
+    
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed for GOOS=$GOOS GOARCH=$GOARCH"
         Write-Host "Error details:`n$buildResult"
         exit 1
     }
 
-    $BUILD_ARRAY.Add("$ROOT_DIR\build\$EXECUTABLE_NAME")
+    $BUILD_ARRAY.Add("$ROOT_DIR/build/$EXECUTABLE_NAME")
     Write-Host "Build succeeded: $EXECUTABLE_NAME"
 
     $INSTALL_ACTIONS_NAME = "install_actions_${GOOS}_${GOARCH}.exe"
     Write-Host "Building executable: $INSTALL_ACTIONS_NAME for $GOOS $GOARCH..."
-    $buildResult = & "go" "build" "-o" "$ROOT_DIR\build\$INSTALL_ACTIONS_NAME" "$ROOT_DIR\cmd\installeractions"
-
+    $buildResult = & "go" "build" "-o" "$ROOT_DIR/build/$INSTALL_ACTIONS_NAME" "$ROOT_DIR/cmd/installeractions"
+    
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed for GOOS=$GOOS GOARCH=$GOARCH"
         Write-Host "Error details:`n$buildResult"
         exit 1
     }
 
-    $BUILD_ARRAY.Add("$ROOT_DIR\build\$INSTALL_ACTIONS_NAME")
+    $BUILD_ARRAY.Add("$ROOT_DIR/build/$INSTALL_ACTIONS_NAME")
     Write-Host "Build succeeded: $INSTALL_ACTIONS_NAME"
 }
 
@@ -123,7 +123,7 @@ if (-not $GOARCH) {
     build_for_target $GOARCH
 } else {
     Write-Host "Invalid architecture: $GOARCH"
-    Write-Host "Usage: .\scripts\build.ps1 [-GOARCH <amd64|arm64>]"
+    Write-Host "Usage: ./scripts/build.ps1 [-GOARCH <amd64|arm64>]"
     exit 1
 }
 
