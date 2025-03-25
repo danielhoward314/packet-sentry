@@ -15,6 +15,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
         architecture: [amd64, arm64]
+      # use exclude for non-sensical combinations
+      exclude:
+        - os: ubuntu-latest
+          architecture: arm64
+        - os: ubuntu-24.04-arm
+          architecture: amd64
+        - os: windows-latest
+          architecture: arm64 
 
     steps:
       - name: Checkout repository
@@ -49,6 +57,8 @@ jobs:
         run: |
           echo "GOARCH=${{ matrix.architecture }}" >> $GITHUB_ENV
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            OS_NAME="linux"
+          elif [ "${{ matrix.os }}" == "ubuntu-24.04-arm" ]; then
             OS_NAME="linux"
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             OS_NAME="darwin"
