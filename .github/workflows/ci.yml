@@ -61,7 +61,7 @@ jobs:
             ./scripts/build darwin ${{ matrix.architecture }}
             # TODO: use git to get version
             ./macos-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
-            ./macos-installer/validate-installer 1.0.0 ${{ matrix.architecture }}
+            ./macos-installer/validate-installer.sh 1.0.0 ${{ matrix.architecture }}
           else
             pwsh ./scripts/build.ps1 ${{ matrix.architecture }}
             # TODO: use git to get version
