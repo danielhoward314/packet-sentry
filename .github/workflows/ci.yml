@@ -57,12 +57,14 @@ jobs:
             ./scripts/build linux ${{ matrix.architecture }}
             go run ./linux-installer/main.go 1.0.0 ${{ matrix.architecture }}
             # TODO: linux installer validation
-          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          fi
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             ./scripts/build darwin ${{ matrix.architecture }}
             # TODO: use git to get version
             ./macos-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
             ./macos-installer/validate-installer 1.0.0 ${{ matrix.architecture }}
-          else
+          fi
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             pwsh ./scripts/build.ps1 ${{ matrix.architecture }}
             # TODO: use git to get version
             # TODO: ensure WiX Toolset is installed before we can build the installer
