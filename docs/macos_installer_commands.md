@@ -12,6 +12,12 @@
 ./macos-installer/build-installer.sh <version> <amd64|arm64>
 ```
 
+## Validate macOS Installer
+
+```bash
+./macos-installer/validate-installer <version> <amd64|arm64>
+```
+
 ## Inspect the macOS installer pkg
 
 ```bash

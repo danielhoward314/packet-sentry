@@ -50,23 +50,22 @@ jobs:
           echo "GOARCH=${{ matrix.architecture }}" >> $GITHUB_ENV
           echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
 
-      - name: Build Go Binary for ${{ matrix.os }} ${{ matrix.architecture }}
+      - name: Build Go Binary and Installer for ${{ matrix.os }} ${{ matrix.architecture }}
         shell: bash
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            OS_NAME="linux"
+            ./scripts/build linux ${{ matrix.architecture }}
+            # TODO: use git to get version
+            ./linux-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
+            # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            OS_NAME="darwin"
+            ./scripts/build darwin ${{ matrix.architecture }}
+            # TODO: use git to get version
+            ./macos-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
+            ./macos-installer/validate-installer 1.0.0 ${{ matrix.architecture }}
+
           else
-            OS_NAME="windows"
-          fi
-
-          echo "OS_NAME=${OS_NAME}"
-
-          if [[ "${OS_NAME}" == "windows" ]]; then
-            # Run Windows-specific build script
             pwsh ./scripts/build.ps1 ${{ matrix.architecture }}
-          else
-            # Run Unix-specific build script
-            ./scripts/build ${OS_NAME} ${{ matrix.architecture }}
+            # TODO: ensure WiX Toolset is installed before we can build the installer
+            # TODO: windows installer validation
           fi

@@ -20,7 +20,7 @@ fi
 
 VERSION="$1"
 ARCH="$2"
-echo "building installer for version: ${VERSION}"
+echo "building installer for architecture ${ARCH} and version ${VERSION}"
 
 # Clean previous builds.
 rm -rf "$ROOT_DIR/macos-installer/build/"
@@ -42,6 +42,19 @@ cp -f "$ROOT_DIR/macos-installer/package/com.danielhoward314.packet-sentry-agent
 chmod +x "$ROOT_DIR/macos-installer/build/opt/packet-sentry/bin/packet-sentry-agent"
 
 pushd "$ROOT_DIR/macos-installer/package"
+
+# Clean up previous build artifacts.
+rm distribution.xml
+
+# Copy the template to distribution.xml
+cp distribution.xml.template distribution.xml
+# Use sed to replace hard-coded version in the template with the actual version
+sed -i '' -E "s/(<pkg-ref id=\"com\.danielhoward314\.packet-sentry-agent\" version=\")([^\"]+)(\">)/\1$VERSION\3/" distribution.xml
+sed -i '' -E "s/(<product version=\")([^\"]+)(\"\/>)/\1$VERSION\3/" distribution.xml
+echo "Generated distribution.xml with version $VERSION"
+
 pkgbuild --root ../build --identifier com.danielhoward314.packet-sentry-agent --scripts scripts --version "${VERSION}" --ownership recommended agent.pkg
 productbuild --distribution "./distribution.xml" --resources "./resources" --version "${VERSION}" packet-sentry-agent.pkg
 popd
+
+echo "Successfully built macOS installer pkg."

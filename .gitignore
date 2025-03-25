@@ -2,6 +2,10 @@
 build/
 macos-installer/build
 macos-installer/package/*.pkg
+# the distribution.xml.template should be in version control
+# the actual xml we create during installer build should not
+macos-installer/package/distribution.xml
+!macos-installer/package/distribution.xml.template
 linux-installer/build
 linux-installer/packet-sentry-agent_*.deb
 linux-installer/packet-sentry-agent_*.rpm

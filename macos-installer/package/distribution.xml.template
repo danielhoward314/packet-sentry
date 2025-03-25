@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Schema documentation: https://developer.apple.com/library/archive/documentation/DeveloperTools/Reference/DistributionDefinitionRef/Chapters/Distribution_XML_Ref.html -->
+<installer-gui-script minSpecVersion="2">
+    <allowed-os-versions>
+        <os-version min="12.0.0"/>
+    </allowed-os-versions>
+    <choice id="com.danielhoward314.packet-sentry-agent" visible="false" title="Packet Sentry Agent" description="The Packet Sentry Agent" start_selected="true">
+        <pkg-ref id="com.danielhoward314.packet-sentry-agent"/>
+    </choice>
+    <choices-outline>
+        <line choice="com.danielhoward314.packet-sentry-agent"/>
+    </choices-outline>
+    <title>Packet Sentry Agent</title>
+    <organization>com.danielhoward314</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" hostArchitectures="x86_64,arm64"/>
+    <pkg-ref id="com.danielhoward314.packet-sentry-agent" version="1.0">#agent.pkg</pkg-ref>
+    <pkg-ref id="com.danielhoward314.packet-sentry-agent">
+        <bundle-version/>
+    </pkg-ref>
+    <product version="1.0"/>
+</installer-gui-script>
