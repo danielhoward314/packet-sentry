@@ -9,7 +9,7 @@
 ## Build Linux the .deb Installer
 
 ```bash
-./linux-installer/build-installer.sh <version> <amd64|arm64>
+go run ./linux-installer/main.go <version> <amd64|arm64>
 ```
 
 Depends on `dpkg-deb`.

@@ -56,7 +56,7 @@ jobs:
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             ./scripts/build linux ${{ matrix.architecture }}
             # TODO: use git to get version
-            ./linux-installer/build-installer.sh 1.0.0 ${{ matrix.architecture }}
+            go run ./linux-installer/main.go 1.0.0 ${{ matrix.architecture }}
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             ./scripts/build darwin ${{ matrix.architecture }}
