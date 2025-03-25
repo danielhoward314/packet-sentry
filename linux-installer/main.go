@@ -117,8 +117,10 @@ func main() {
 
 	version := os.Args[1]
 	arch := os.Args[2]
+	fmt.Printf("Building linux installer for version %s and architecture %s\n", version, arch)
 
 	goBuildBinary := fmt.Sprintf("./build/packet_sentry_linux_%s", arch)
+	fmt.Printf("Checking for existing of go build binary %s\n", goBuildBinary)
 	if _, err := os.Stat(goBuildBinary); os.IsNotExist(err) {
 		fmt.Printf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
 		os.Exit(1)
@@ -144,17 +146,20 @@ func main() {
 	}
 
 	for _, dir := range requiredDebDirs {
+		fmt.Printf("Making required .deb directory %s\n", dir)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			fmt.Printf("Error creating directory %s: %v\n", dir, err)
 			os.Exit(1)
 		}
 	}
 
+	fmt.Printf("Copying file %s to %s\n", goBuildBinary, filepath.Join(debBuildDir, commonBinFile))
 	_, err := copy(goBuildBinary, filepath.Join(debBuildDir, commonBinFile))
 	if err != nil {
 		fmt.Printf("copy from src %s to dest %s failed due to %s\n", goBuildBinary, filepath.Join(debBuildDir, commonBinFile), err)
 		os.Exit(1)
 	}
+	fmt.Printf("Copying file %s to %s\n", packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile))
 	_, err = copy(packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile))
 	if err != nil {
 		fmt.Printf("copy from src %s to dest %s failed due to %s\n", packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile), err)
@@ -168,6 +173,7 @@ func main() {
 	}
 
 	for dest, src := range debTemplates {
+		fmt.Printf("Processing .deb template %s for destination %s\n", src, dest)
 		content, err := readFileContent(src)
 		if err != nil {
 			fmt.Println("Error reading template:", err)
@@ -185,6 +191,7 @@ func main() {
 	}
 
 	for _, script := range []string{debPostinstPath, debPrermPath} {
+		fmt.Printf("Changing file permissions to 0755 for script %s\n", script)
 		if err := os.Chmod(script, 0755); err != nil {
 			fmt.Println("Error setting executable permissions:", err)
 			os.Exit(1)
@@ -192,6 +199,7 @@ func main() {
 	}
 
 	debOutput := fmt.Sprintf("./linux-installer/packet-sentry-agent_%s_%s.deb", version, arch)
+	fmt.Printf("About to execute `dpkg-deb --build %s %s`\n", debBuildDir, debOutput)
 	if err := runCommand("dpkg-deb", "--build", debBuildDir, debOutput); err != nil {
 		fmt.Println("Error building DEB package:", err)
 		os.Exit(1)
