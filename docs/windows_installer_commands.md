@@ -1,6 +1,6 @@
 # Windows Installer Commands
 
-## Build the Go executable (Windows & Linux)
+## Build the Go executable (Windows & Unix)
 
 Windows:
 
@@ -8,14 +8,17 @@ Windows:
 .\scripts\build.ps1 <amd64|arm64>
 ```
 
-Linux (must have installed PowerShell first):
+Unix (must have installed PowerShell first):
+
+- macOS PowerShell download instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-macos?view=powershell-7.5)
+- Linux PowerShell download instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux?view=powershell-7.5)
 
 ```bash
 pwsh # should launch a new PowerShell process
 ```
 
 ```PowerShell
-./scripts/build-windows-on-linux.ps1 <amd64|arm64>
+./scripts/build-windows-on-unix.ps1 -arch <amd64|arm64> -version <version>
 ```
 
 ## Install Pre-requisites
@@ -48,7 +51,7 @@ msiexec /x bin\Debug\QuickStart.msi /l*v uninstall_log.txt
 
 
 ```PowerShell
-# Requires an admin session and you may to run cmdlet `Set-ExecutionPolicy <PolicyValue>` to be able execute a script.
+# Requires an admin session. Also, you may need to run cmdlet `Set-ExecutionPolicy <PolicyValue>` to be able execute a script.
 .\windows-installer\build-installer.ps1 -arch amd64 -version 2.3.4
 ```
 
