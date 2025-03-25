@@ -95,6 +95,6 @@ jobs:
             echo "building Go binaries for windows ${{ matrix.architecture }}"
             pwsh ./scripts/build.ps1 "${{ matrix.architecture }}"
             # TODO: use git to get version
-            # TODO: ensure WiX Toolset is installed before we can build the installer
+            pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version 1.0.0 -ci $true
             # TODO: windows installer validation
           fi

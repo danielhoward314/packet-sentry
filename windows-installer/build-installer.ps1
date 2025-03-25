@@ -1,6 +1,7 @@
 param(
     [string]$arch = "amd64",
-    [string]$version = "1.0.0"
+    [string]$version = "1.0.0",
+    [bool]$ci = $false
 )
 
 # Map GOARCH architecture to WiX platform names
@@ -88,7 +89,22 @@ function Find-WiXToolset {
     return $null
 }
 
-$wixBinPath = Find-WiXToolset
+if ($ci) {
+    Write-Host "CI mode enabled. Checking for WiX via environment variable..."
+    if ($Env:WIX) {
+        $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+        $NewPath = "$($Env:WIX)\bin;$currentPath"
+        [Environment]::SetEnvironmentVariable("PATH", $NewPath, "Machine")
+        $wixBinPath = "$($Env:WIX)\bin"
+    } else {
+        Write-Host "Environment variable WIX not set. Falling back to local detection."
+        $wixBinPath = Find-WiXToolset
+    }
+} else {
+    Write-Host "CI mode disabled. Using local WiX installation detection."
+    $wixBinPath = Find-WiXToolset
+}
+
 if ($wixBinPath) {
     $candleExe = "$wixBinPath\candle.exe"
     $lightExe = "$wixBinPath\light.exe"
@@ -111,6 +127,5 @@ if (-Not (Test-Path $productWixObj)) {
 
 # Now run light.exe to generate the MSI
 &$lightExe $productWixObj -o "$installerDir\PacketSentryInstaller_${arch}_v${version}.msi"
-
 
 Write-Host "Installer built successfully: $installerDir\PacketSentryInstaller_${arch}_v${version}.msi"

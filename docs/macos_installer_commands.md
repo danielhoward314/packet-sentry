@@ -20,6 +20,8 @@
 
 ## Inspect the macOS installer pkg
 
+See the logic of the `validate-installer.sh` script for a more complete picture.
+
 ```bash
 cd ./macos-installer/package
 pkgutil --expand packet-sentry-agent.pkg expanded
