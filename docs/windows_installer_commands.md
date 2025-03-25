@@ -49,7 +49,7 @@ msiexec /x bin\Debug\QuickStart.msi /l*v uninstall_log.txt
 
 ```PowerShell
 # Requires an admin session and you may to run cmdlet `Set-ExecutionPolicy <PolicyValue>` to be able execute a script.
-.\windows-installer\build-installer.ps1
+.\windows-installer\build-installer.ps1 -arch amd64 -version 2.3.4
 ```
 
 The error `light.exe : warning LGHT1032 : Unable to reset acls on destination files.` can happen if you're working on the files within a shared folder between host and guest Windows VM; copy the repo to a location on the guest Windows system.
