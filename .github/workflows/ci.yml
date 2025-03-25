@@ -48,7 +48,14 @@ jobs:
       - name: Set up Go environment variables
         run: |
           echo "GOARCH=${{ matrix.architecture }}" >> $GITHUB_ENV
-          echo "GOOS=${{ matrix.os }}" >> $GITHUB_ENV
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            OS_NAME="linux"
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            OS_NAME="darwin"
+          else
+            OS_NAME="windows"
+          fi
+          echo "GOOS=${OS_NAME}" >> $GITHUB_ENV
 
       - name: Build Go Binary and Installer for ${{ matrix.os }} ${{ matrix.architecture }}
         shell: bash
