@@ -199,7 +199,7 @@ func main() {
 	}
 
 	debOutput := fmt.Sprintf("./linux-installer/packet-sentry-agent_%s_%s.deb", version, arch)
-	fmt.Printf("About to execute `dpkg-deb --build %s %s`\n", debBuildDir, debOutput)
+	fmt.Printf("About to execute dpkg-deb --build %s %s\n", debBuildDir, debOutput)
 	if err := runCommand("dpkg-deb", "--build", debBuildDir, debOutput); err != nil {
 		fmt.Println("Error building DEB package:", err)
 		os.Exit(1)
