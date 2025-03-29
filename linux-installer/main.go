@@ -10,37 +10,46 @@ import (
 	"text/template"
 )
 
+// common constants
 const (
-	controlTemplatePath  = "./linux-installer/deb-templates/control.template"
-	postinstTemplatePath = "./linux-installer/deb-templates/postinst.template"
-	prermTemplatePath    = "./linux-installer/deb-templates/prerm.template"
-	specTemplatePath     = "./linux-installer/rpm-templates/package.spec.template"
-)
+	// inputs
+	commonBuildDir           = "./linux-installer/build"
+	commonPackageDir         = "./linux-installer/package"
+	commonPackageServiceFile = commonPackageDir + "/packet-sentry-agent.service"
 
-const (
-	buildDir   = "./linux-installer/build"
-	packageDir = "./linux-installer/package"
-
+	// outputs
+	commonPackageName    = "packet-sentry-agent"
 	commonInstallDir     = "/opt/packet-sentry"
-	commonSystemdDir     = "/etc/systemd/system"
+	commonBootstrapFile  = commonInstallDir + "/agentBootstrap.json"
 	commonBinDir         = commonInstallDir + "/bin"
 	commonBinFile        = commonBinDir + "/packet-sentry-agent"
-	commonSystemdSvcFile = "/packet-sentry-agent.service"
+	commonSystemdDir     = "/etc/systemd/system"
+	commonSystemdSvcFile = commonSystemdDir + "/packet-sentry-agent.service"
+)
 
-	debBuildDir     = buildDir + "/deb"
+// .deb constants
+const (
+	// inputs
+	debTemplatesPath        = "./linux-installer/deb-templates"
+	debControlTemplatePath  = debTemplatesPath + "/control.tmpl"
+	debPostinstTemplatePath = debTemplatesPath + "/postinst.tmpl"
+	debPrermTemplatePath    = debTemplatesPath + "/prerm.tmpl"
+
+	// outputs
+	debBuildDir     = commonBuildDir + "/deb"
 	debDebianDir    = debBuildDir + "/DEBIAN"
 	debControlPath  = debBuildDir + "/DEBIAN/control"
 	debPostinstPath = debBuildDir + "/DEBIAN/postinst"
 	debPrermPath    = debBuildDir + "/DEBIAN/prerm"
 	debInstallDir   = debBuildDir + commonInstallDir
 	debSystemdDir   = debBuildDir + commonSystemdDir
-	debBinDir       = debInstallDir + "/bin"
+	debBinDir       = debBuildDir + commonBinDir
 )
 
-type PackageInfo struct {
-	Architecture    string
-	PackageName     string
-	PackageVersion  string
+type DebPackageInfo struct {
+	Arch            string
+	Name            string
+	Version         string
 	BootstrapFile   string
 	InstallDir      string
 	MaintainerEmail string
@@ -109,31 +118,15 @@ func copy(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
-func main() {
-	if len(os.Args) != 3 {
-		fmt.Printf("Invalid number of arguments.\n\n\tUsage: go run main.go [version] [arch]\n\n")
-		os.Exit(1)
-	}
-
-	version := os.Args[1]
-	arch := os.Args[2]
-	fmt.Printf("Building linux installer for version %s and architecture %s\n", version, arch)
-
-	goBuildBinary := fmt.Sprintf("./build/packet_sentry_linux_%s", arch)
-	fmt.Printf("Checking for existing of go build binary %s\n", goBuildBinary)
-	if _, err := os.Stat(goBuildBinary); os.IsNotExist(err) {
-		fmt.Printf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
-		os.Exit(1)
-	}
-
+func buildDebPackage(goBuildBinary string, version string, arch string) {
 	// DEB package setup
-	debPackageInfo := PackageInfo{
-		PackageName:     "packet-sentry-agent",
-		PackageVersion:  version,
-		BootstrapFile:   commonInstallDir + "/agentBootstrap.json",
+	debPackageInfo := DebPackageInfo{
+		Name:            commonPackageName,
+		Version:         version,
+		BootstrapFile:   commonBootstrapFile,
 		InstallDir:      commonInstallDir,
 		MaintainerEmail: "maintainer@example.com",
-		Architecture:    arch,
+		Arch:            arch,
 		BinFile:         commonBinFile,
 	}
 
@@ -159,17 +152,17 @@ func main() {
 		fmt.Printf("copy from src %s to dest %s failed due to %s\n", goBuildBinary, filepath.Join(debBuildDir, commonBinFile), err)
 		os.Exit(1)
 	}
-	fmt.Printf("Copying file %s to %s\n", packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile))
-	_, err = copy(packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile))
+	fmt.Printf("Copying file %s to %s\n", commonPackageServiceFile, filepath.Join(debBuildDir, commonSystemdSvcFile))
+	_, err = copy(commonPackageServiceFile, filepath.Join(debBuildDir, commonSystemdSvcFile))
 	if err != nil {
-		fmt.Printf("copy from src %s to dest %s failed due to %s\n", packageDir+commonSystemdSvcFile, filepath.Join(debBuildDir, commonSystemdDir+commonSystemdSvcFile), err)
+		fmt.Printf("copy from src %s to dest %s failed due to %s\n", commonPackageServiceFile, filepath.Join(debBuildDir, commonSystemdSvcFile), err)
 		os.Exit(1)
 	}
 
 	debTemplates := map[string]string{
-		debControlPath:  controlTemplatePath,
-		debPostinstPath: postinstTemplatePath,
-		debPrermPath:    prermTemplatePath,
+		debControlPath:  debControlTemplatePath,
+		debPostinstPath: debPostinstTemplatePath,
+		debPrermPath:    debPrermTemplatePath,
 	}
 
 	for dest, src := range debTemplates {
@@ -205,4 +198,33 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("DEB package built:", debOutput)
+}
+
+func main() {
+	if len(os.Args) != 4 {
+		fmt.Printf("Invalid number of arguments.\n\n\tUsage: go run main.go [version] [arch] [format]\n\n")
+		os.Exit(1)
+	}
+
+	version := os.Args[1]
+	arch := os.Args[2]
+	format := os.Args[3]
+	fmt.Printf(
+		"Building linux installer for version %s, architecture %s and installer format %s\n",
+		version,
+		arch,
+		format,
+	)
+
+	goBuildBinary := fmt.Sprintf("./build/packet_sentry_linux_%s", arch)
+	fmt.Printf("Checking for existing of go build binary %s\n", goBuildBinary)
+	if _, err := os.Stat(goBuildBinary); os.IsNotExist(err) {
+		fmt.Printf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
+		os.Exit(1)
+	}
+
+	switch format {
+	case "deb":
+		buildDebPackage(goBuildBinary, version, arch)
+	}
 }

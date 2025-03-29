@@ -1,6 +1,0 @@
-Package: {{ .PackageName }}
-Version: {{ .PackageVersion }}
-Architecture: {{ .Architecture }}
-Maintainer: {{ .MaintainerEmail }}
-Depends: libc6 (>= 2.15)
-Description: {{ .PackageName }} is an NDR daemon.
