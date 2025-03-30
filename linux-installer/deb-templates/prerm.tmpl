@@ -2,17 +2,15 @@
 
 set -e
 
-BIN_FILE="{{ .BinFile }}"
-SERVICE_FILE="/etc/systemd/system/packet-sentry-agent.service"
-INSTALL_DIR="{{ .InstallDir }}"
-
 # Stop and disable the systemd service
-systemctl stop packet-sentry-agent.service || true
-systemctl disable packet-sentry-agent.service || true
-rm -f "$SERVICE_FILE"
+systemctl stop {{ .Name }}.service || true
+systemctl disable {{ .Name }}.service || true
+
+# Remove systemd service file
+rm -f "{{ .SystemdServiceFilePath }}"
 
 # Remove installed files
-rm -rf "$INSTALL_DIR"
+rm -rf "{{ .InstallDir }}"
 
 # Reload systemd to ensure all services are cleared
 systemctl daemon-reload

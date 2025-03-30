@@ -1,0 +1,50 @@
+Name:           {{ .Name }}
+Version:        {{ .Version }}
+Release:        1%{?dist}
+Summary:        Packet Sentry Agent
+
+License:        MIT
+URL:            https://example.com/packet-sentry
+
+BuildArch:      {{ .Arch }}
+
+%description
+Packet Sentry Agent daemon for monitoring network traffic.
+
+%install
+mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}{{ .BinaryDestDir }}
+mkdir -p %{buildroot}{{ .ServiceDestDir }}
+
+install -m 755 %{_sourcedir}/{{ .BinarySourceName }} %{buildroot}{{ .BinaryDestDir }}/{{ .Name }}
+install -m 755 %{_sourcedir}/{{ .SetupScriptName }} %{buildroot}{{ .SetupScriptDest }}/{{ .SetupScriptName }}
+install -m 644 %{_sourcedir}/{{ .Name }}.service %{buildroot}{{ .ServiceDestDir }}/{{ .Name }}.service
+
+%files
+%attr(755, root, root) {{ .BinaryDestDir }}/{{ .Name }}
+%attr(755, root, root) {{ .SetupScriptDest }}/{{ .SetupScriptName }}
+%attr(644, root, root) {{ .ServiceDestDir }}/{{ .Name }}.service
+
+%post
+systemctl daemon-reload
+systemctl enable {{ .Name }}.service
+systemctl start {{ .Name }}.service || :
+
+%preun
+if [ $1 -eq 0 ]; then
+    systemctl stop {{ .Name }}.service || :
+    systemctl disable {{ .Name }}.service || :
+    rm -f /etc/systemd/system/{{ .Name }}.service
+
+    # Remove installed files
+    rm -rf "/opt/packet-sentry"
+
+    # Reload systemd to ensure all services are cleared
+    systemctl daemon-reload
+fi
+
+%postun
+if [ $1 -eq 0 ]; then
+    systemctl daemon-reload
+fi
+

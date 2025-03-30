@@ -7,8 +7,6 @@ macos-installer/package/*.pkg
 macos-installer/package/distribution.xml
 !macos-installer/package/distribution.xml.template
 linux-installer/build
-linux-installer/packet-sentry-agent_*.deb
-linux-installer/packet-sentry-agent_*.rpm
 windows-installer/*.wixobj
 windows-installer/*.wixpdb
 windows-installer/*.msi

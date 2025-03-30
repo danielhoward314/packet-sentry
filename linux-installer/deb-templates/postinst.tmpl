@@ -1,6 +1,21 @@
 #!/bin/bash
 echo "Post-installation: Setting up Packet Sentry Agent..."
 
+# Ensure the installation directory has correct ownership and permissions
+chown root:root "{{ .InstallDir }}"
+chmod 0755 "{{ .InstallDir }}"
+
+chown root:root "{{ .InstallDir }}/bin"
+chmod 0755 "{{ .InstallDir }}/bin"
+
+# Ensure the binary has correct ownership and permissions
+chown root:root "{{ .BinFile }}"
+chmod 0755 "{{ .BinFile }}"
+
+# Ensure systemd service file has correct permissions
+chown root:root "{{ .SystemdServiceFilePath }}"
+chmod 0644 "{{ .SystemdServiceFilePath }}"
+
 # Prompt user for install key if not provided
 if [ ! -f "{{ .BootstrapFile }}" ]; then
     echo "Please enter the install key:"
@@ -22,13 +37,12 @@ EOF
     # Restore HISTFILE to its original value
     HISTFILE="${OLD_HISTFILE}"
 
-    chmod 600 "{{ .BootstrapFile }}"
+    chown root:root "{{ .BootstrapFile }}"
+    chmod 0600 "{{ .BootstrapFile }}"
     echo "Install key has been saved."
 fi
 
-chmod -R 750 "{{ .InstallDir }}"
-
 # Start the service
 systemctl daemon-reload
-systemctl enable packet-sentry-agent
-systemctl start packet-sentry-agent
+systemctl enable {{ .Name }}
+systemctl start {{ .Name }}

@@ -75,13 +75,13 @@ jobs:
             echo "building Go binaries for linux amd64"
             ./scripts/build "linux" "amd64"
             echo "build Linux .deb installer for version 1.0.0 for amd64"
-            go run ./linux-installer/main.go "1.0.0" "amd64"
+            go run ./linux-installer/main.go "1.0.0" "amd64" "deb"
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "ubuntu-24.04-arm" ]; then
             echo "building Go binaries for linux arm64"
             ./scripts/build "linux" "arm64"
             echo "build Linux .deb installer for version 1.0.0 for arm64"
-            go run ./linux-installer/main.go "1.0.0" "arm64"
+            go run ./linux-installer/main.go "1.0.0" "arm64" "deb"
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "building Go binaries for darwin ${{ matrix.architecture }}"
