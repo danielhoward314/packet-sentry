@@ -1,4 +1,4 @@
-package ndrmgr
+package pcap
 
 import (
 	"context"

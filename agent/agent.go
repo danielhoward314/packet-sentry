@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 
-	ndrmgr "github.com/danielhoward314/packet-sentry/internal/pcap"
+	psPCap "github.com/danielhoward314/packet-sentry/internal/pcap"
 )
 
 type Agent struct {
 	Ctx         context.Context
-	PCapManager ndrmgr.PCapManager
+	PCapManager psPCap.PCapManager
 }
 
 func NewAgent() *Agent {
@@ -17,7 +17,7 @@ func NewAgent() *Agent {
 	}
 }
 
-func (agent *Agent) InjectDependencies(pcapManager ndrmgr.PCapManager) {
+func (agent *Agent) InjectDependencies(pcapManager psPCap.PCapManager) {
 	agent.PCapManager = pcapManager
 }
 
