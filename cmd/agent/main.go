@@ -1,14 +1,20 @@
 package main
 
 import (
-	"time"
-
 	"github.com/danielhoward314/packet-sentry/agent"
-	"github.com/danielhoward314/packet-sentry/services/dummy"
+	ndrmgr "github.com/danielhoward314/packet-sentry/internal/pcap"
 )
 
 func initializeAgent(psAgent *agent.Agent) (err error) {
 	// TODO: cert and install key logic here
-	psAgent.InjectDependencies(dummy.NewDummyService(1 * time.Minute))
+	pcapManager := ndrmgr.NewPCapManager(psAgent.Ctx)
+	// TODO: use goroutine and synchronization primitives instead of blocking
+	err = pcapManager.EnsureReady()
+	if err != nil {
+		return err
+	}
+	psAgent.InjectDependencies(
+		pcapManager,
+	)
 	return err
 }

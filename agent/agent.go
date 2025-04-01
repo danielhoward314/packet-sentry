@@ -1,27 +1,32 @@
 package agent
 
 import (
-	"github.com/danielhoward314/packet-sentry/services/dummy"
+	"context"
+
+	ndrmgr "github.com/danielhoward314/packet-sentry/internal/pcap"
 )
 
 type Agent struct {
-	DummyService dummy.DummyService
+	Ctx         context.Context
+	PCapManager ndrmgr.PCapManager
 }
 
 func NewAgent() *Agent {
-	return &Agent{}
+	return &Agent{
+		Ctx: context.Background(),
+	}
 }
 
-func (agent *Agent) InjectDependencies(dummyService dummy.DummyService) {
-	agent.DummyService = dummyService
+func (agent *Agent) InjectDependencies(pcapManager ndrmgr.PCapManager) {
+	agent.PCapManager = pcapManager
 }
 
 func (agent *Agent) Start() (err error) {
-	agent.DummyService.Start()
+	agent.PCapManager.StartAll()
 	return
 }
 
 func (agent *Agent) Stop() (err error) {
-	agent.DummyService.Stop()
+	agent.PCapManager.StopAll()
 	return
 }
