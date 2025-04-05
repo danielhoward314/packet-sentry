@@ -73,7 +73,7 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             echo "installing libpcap dependency"
-            sudo apt-get install -y libpcap0.8
+            sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux amd64"
             ./scripts/build "linux" "amd64"
             echo "build Linux .deb installer for version 1.0.0 for amd64"
@@ -81,7 +81,7 @@ jobs:
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "ubuntu-24.04-arm" ]; then
             echo "installing libpcap dependency"
-            sudo apt-get install -y libpcap0.8
+            sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux arm64"
             ./scripts/build "linux" "arm64"
             echo "build Linux .deb installer for version 1.0.0 for arm64"
