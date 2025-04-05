@@ -4,12 +4,14 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
 	"github.com/danielhoward314/packet-sentry/agent"
+	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 )
 
 const (
@@ -19,23 +21,30 @@ const (
 func main() {
 	var err error
 	psAgent := agent.NewAgent()
+	if psAgent.BaseLogger == nil {
+		panic("failed to get new agent instance")
+	}
+	psAgent.BaseLogger.Info("initializing agent")
 	err = initializeAgent(psAgent)
 	if err != nil {
+		psAgent.BaseLogger.Error("failed to initialize agent", psLog.KeyError, err)
 		panic(fmt.Sprintf("main: could not initialize agent due to %s", err))
 	}
 	err = os.WriteFile(pidFileName, []byte(strconv.Itoa(os.Getpid())), 0o644)
 	if err != nil {
+		psAgent.BaseLogger.Error("failed to write pid file", psLog.KeyError, err)
 		panic(fmt.Sprintf("main: could not write pid file due to %s", err))
 	}
 	go func() {
 		err = psAgent.Start()
 		if err != nil {
+			psAgent.BaseLogger.Error("failed to start agent", psLog.KeyError, err)
 			panic(fmt.Sprintf("Agent failed to start due to %s", err))
 		}
 	}()
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, syscall.SIGTERM, syscall.SIGINT)
-	// TODO: log the signal with a shutdown message
-	_ = <-signalChannel
+	receivedSignal := <-signalChannel
+	psAgent.BaseLogger.Info("received sigterm or sigint, shutting down agent", slog.String("signal", receivedSignal.String()))
 	psAgent.Stop()
 }

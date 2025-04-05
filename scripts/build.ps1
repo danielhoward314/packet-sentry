@@ -21,8 +21,15 @@ function build_for_target {
     $env:GOOS = $GOOS
     $env:GOARCH = $GOARCH
 
+    Write-Host "Downloading go dependencies with 'go mod download'..."
+    go mod download
+
+    $CommitHash = (git rev-parse --short HEAD).Trim()
+    $BuildTime = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+    $LDFLAGS = "-w -s -buildmode=exe -X `"main.Version=1.0.0`" -X `"main.CommitHash=$CommitHash`" -X `"main.BuildTime=$BuildTime`""
+
     Write-Host "Building executable: $EXECUTABLE_NAME for $GOOS $GOARCH..."
-    $buildResult = & "go" "build" "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\cmd\agent"
+    $buildResult = $env:CGO_ENABLED="1"; & "go" "build" "-trimpath" "-ldflags" $LDFLAGS "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\cmd\agent"
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed for GOOS=$GOOS GOARCH=$GOARCH"
@@ -114,11 +121,9 @@ function validate_executable_format {
     Write-Host "Validation successful: $EXECUTABLE is a valid $arch executable."
 }
 
-# If no architecture is specified, build for both amd64 and arm64
 if (-not $GOARCH) {
-    Write-Host "No architecture specified, building for both amd64 and arm64..."
-    build_for_target "amd64"
-    build_for_target "arm64"
+    Write-Host "Must specify architecture -GOARCH <amd64|arm64>"
+    exit 1
 } elseif ($GOARCH -in @("amd64", "arm64")) {
     build_for_target $GOARCH
 } else {

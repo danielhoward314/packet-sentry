@@ -122,5 +122,9 @@ if (-Not (Test-Path $productWixObj)) {
 
 # Now run light.exe to generate the MSI
 &$lightExe $productWixObj -o "$installerDir\PacketSentryInstaller_${arch}_v${version}.msi"
+if (-Not (Test-Path "$installerDir\PacketSentryInstaller_${arch}_v${version}.msi")) {
+    Write-Error "Failed to create MSI file"
+    exit 1
+}
 
 Write-Host "Installer built successfully: $installerDir\PacketSentryInstaller_${arch}_v${version}.msi"

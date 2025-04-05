@@ -42,6 +42,36 @@
             <ComponentRef Id="PacketSentryServiceComponent" />
         </Feature>
 
+        <!-- Search for the 64-bit registry key -->
+        <Property Id="NPCAPINSTALLED_64">
+            <RegistrySearch Id="NpcapRegistrySearch64" 
+                            Root="HKLM" 
+                            Key="SOFTWARE\Npcap" 
+                            Type="raw" 
+                            Win64="yes" />
+        </Property>
+
+        <!-- Search for the 32-bit registry key (Wow6432Node) -->
+        <Property Id="NPCAPINSTALLED_32">
+            <RegistrySearch Id="NpcapRegistrySearch32" 
+                            Root="HKLM" 
+                            Key="SOFTWARE\Wow6432Node\Npcap" 
+                            Type="raw" 
+                            Win64="yes" />
+        </Property>
+
+        <!-- Set an unconditional property that will be used in the condition -->
+        <SetProperty Id="NPCAPINSTALLED" 
+                    Value="1" 
+                    After="AppSearch">
+            NPCAPINSTALLED_64 OR NPCAPINSTALLED_32
+        </SetProperty>
+
+        <!-- The condition now checks if either registry key was found -->
+        <Condition Message="Npcap must be installed to continue.">
+            <![CDATA[Installed OR NPCAPINSTALLED = "1"]]>
+        </Condition>
+
         <Binary Id="InstallActions" SourceFile="windows-installer\bin\x64\install_actions.exe" />
 
         <!-- CustomActions to write the Install Key into agentBootstrap.json and lock down its ACLS in two steps.

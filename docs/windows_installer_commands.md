@@ -1,27 +1,16 @@
 # Windows Installer Commands
 
-## Build the Go executable (Windows & Unix)
+## Build the Go executable
 
-Windows:
+Pre-requisites:
 
-```PowerShell
-.\scripts\build.ps1 <amd64|arm64>
-```
-
-Unix (must have installed PowerShell first):
-
-- macOS PowerShell download instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-macos?view=powershell-7.5)
-- Linux PowerShell download instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux?view=powershell-7.5)
-
-```bash
-pwsh # should launch a new PowerShell process
-```
+- git
 
 ```PowerShell
-./scripts/build-windows-on-unix.ps1 -arch <amd64|arm64> -version <version>
+.\scripts\build.ps1 -GOARCH <amd64|arm64>
 ```
 
-## Install Pre-requisites
+## Pre-requisites for Building the MSI Installer
 
 Install `winget` package manager, either from the Microsoft Store or using PowerShell. From Microsoft documentation:
 
@@ -134,6 +123,10 @@ cabextract -l <msi>
 
 ## Install the Windows MSI
 
+Pre-requisite:
+
+- npcap is installed. Downloads available through [here](https://npcap.com/#download).
+
 Double click it, or use msiexec:
 
 ```PowerShell
@@ -145,7 +138,8 @@ msiexec /i "C:\Users\dhoward\Desktop\scratch\windows-installer\PacketSentryInsta
 Use msiexec with verbose logging written to a log file:
 
 ```PowerShell
- msiexec /i "<absolute-path-to-root-of-project>\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi" /L*v "<absolute-path-to-root-of-project>\install.log"
+msiexec /i "<absolute-path-to-root-of-project>\windows-installer\PacketSentryInstaller_amd64_v1.0.0.msi" /L*v "<absolute-path-to-root-of-project>\install.log"
+msiexec /i "C:\Users\dhoward\Desktop\scratch\windows-installer\PacketSentryInstaller_amd64_v2.3.4.msi" /L*v "C:\Users\dhoward\Desktop\scratch\install.log"
 ```
 
 ## Clean up
@@ -157,3 +151,11 @@ rm .\windows-installer\Product.wixobj
 
 rm .\windows-installer\PacketSentryInstaller_*.msi
 ```
+
+## TODO:
+
+- Install npcap pre-req detection is working.
+- Need to add logging or else debugging is too difficult.
+- The current error is: `2025/04/05 00:12:19 error opening device Loopback Pseudo-Interface 1: Error opening adapter: The filename, directory name, or volume label syntax is incorrect.  (123)`
+- I've hard-coded what I thought would work as the loopback interface to monitor as a test. May need to tweak that.
+- Linux needs work to enforce the pcap pre-requisite or to just do the pcap install as a preinstall step for us.

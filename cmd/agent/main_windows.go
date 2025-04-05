@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 
 	"github.com/danielhoward314/packet-sentry/agent"
+	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 )
 
 const serviceName = "PacketSentryAgent"
@@ -29,14 +30,15 @@ type psService struct{}
 
 // Execute handles Windows Service control requests
 func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (bool, uint32) {
-	elog.Info(1, fmt.Sprintf("%s: Service is starting...", serviceName))
-
-	psAgent := agent.NewAgent()
-
 	// Notify Windows that the service is in the start-up phase
 	s <- svc.Status{State: svc.StartPending}
 
-	// Run initialization (pre-requisite work)
+	psAgent := agent.NewAgent()
+	if psAgent.BaseLogger == nil {
+		panic("failed to get new agent instance")
+	}
+	psAgent.BaseLogger.Info("initializing agent")
+
 	initDone := make(chan error, 1)
 	go func() {
 		initDone <- initializeAgent(psAgent)
@@ -45,22 +47,22 @@ func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 	select {
 	case err := <-initDone:
 		if err != nil {
-			elog.Error(1, fmt.Sprintf("%s: Initialization failed: %s", serviceName, err))
+			psAgent.BaseLogger.Error("initialization failed", psLog.KeyError, err)
 			return false, 1
 		}
 	case <-time.After(25 * time.Second):
-		elog.Warning(1, fmt.Sprintf("%s: Initialization is slow, continuing startup...", serviceName))
+		psAgent.BaseLogger.Warn("initialization is slow, proceeding with startup")
 	}
 
 	// Mark service as running and accept stop/pause/continue
 	s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
-	elog.Info(1, fmt.Sprintf("%s: Service is now running.", serviceName))
+	psAgent.BaseLogger.Info("started Windows service", psLog.KeyServiceName, serviceName)
 
 	// Start the agent in a goroutine
 	go func() {
 		err := psAgent.Start()
 		if err != nil {
-			elog.Error(1, fmt.Sprintf("Agent failed to start: %s", err))
+			psAgent.BaseLogger.Error("failed to start agent", psLog.KeyError, err)
 			s <- svc.Status{State: svc.Stopped}
 		}
 	}()
@@ -69,11 +71,11 @@ func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 	for c := range r {
 		switch c.Cmd {
 		case svc.Interrogate:
-			// Windows SCM is checking service status
+			psAgent.BaseLogger.Info("Windows Service Control Manager is interrogating service state")
 			s <- c.CurrentStatus
 
 		case svc.Stop, svc.Shutdown:
-			elog.Info(1, fmt.Sprintf("%s: Service stopping...", serviceName))
+			psAgent.BaseLogger.Info("Windows Service Control Manager sent stop or shutdown, stopping service")
 			psAgent.Stop()
 			s <- svc.Status{State: svc.Stopped}
 			return false, 0
@@ -83,7 +85,7 @@ func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 			if !isPaused {
 				isPaused = true
 				s <- svc.Status{State: svc.Paused, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
-				elog.Info(1, fmt.Sprintf("%s: Service paused.", serviceName))
+				psAgent.BaseLogger.Info("Windows Service Control Manager is pausing the service")
 			}
 			pauseLock.Unlock()
 
@@ -92,12 +94,12 @@ func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 			if isPaused {
 				isPaused = false
 				s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
-				elog.Info(1, fmt.Sprintf("%s: Service resumed.", serviceName))
+				psAgent.BaseLogger.Info("Windows Service Control Manager is resuming the service")
 			}
 			pauseLock.Unlock()
 
 		default:
-			elog.Warning(1, fmt.Sprintf("%s: Unexpected control request: %d", serviceName, c.Cmd))
+			psAgent.BaseLogger.Warn("unexpected control request", "serviceControlRequest", c.Cmd)
 		}
 	}
 
@@ -109,7 +111,7 @@ func main() {
 	if len(os.Args) < 2 {
 		isService, err := svc.IsWindowsService()
 		if err != nil {
-			log.Fatalf("Failed to determine if running as a service: %v", err)
+			log.Fatalf("failed to determine if running as a service: %v", err)
 		}
 
 		if isService {
