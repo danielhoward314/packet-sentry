@@ -383,13 +383,12 @@ func buildRPMPackage(goBuildBinary, version, arch string) {
 		filepath.Join(rpmFinalOut, rpmFilename),
 	)
 	if err != nil {
-		fmt.Printf(
+		log.Fatalf(
 			"copy from src %s to dest %s failed due to %s\n",
 			rpmPath,
 			filepath.Join(rpmFinalOut, rpmFilename),
 			err,
 		)
-		os.Exit(1)
 	}
 
 	fmt.Printf("RPM file copied to %s\n", filepath.Join(rpmFinalOut, rpmFilename))
@@ -398,8 +397,7 @@ func buildRPMPackage(goBuildBinary, version, arch string) {
 }
 func main() {
 	if len(os.Args) != 4 {
-		fmt.Printf("Invalid number of arguments.\n\n\tUsage: go run main.go [version] [arch] [format]\n\n")
-		os.Exit(1)
+		log.Fatalf("Invalid number of arguments.\n\n\tUsage: go run main.go [version] [arch] [format]\n\n")
 	}
 
 	version := os.Args[1]
@@ -413,10 +411,9 @@ func main() {
 	)
 
 	goBuildBinary := fmt.Sprintf("./build/packet_sentry_linux_%s", arch)
-	fmt.Printf("Checking for existing of go build binary %s\n", goBuildBinary)
+	fmt.Printf("Checking for existing go build binary %s\n", goBuildBinary)
 	if _, err := os.Stat(goBuildBinary); os.IsNotExist(err) {
-		fmt.Printf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
-		os.Exit(1)
+		log.Fatalf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
 	}
 
 	switch format {
@@ -424,5 +421,7 @@ func main() {
 		buildDebPackage(goBuildBinary, version, arch)
 	case "rpm":
 		buildRPMPackage(goBuildBinary, version, arch)
+	default:
+		log.Fatalf("Unsupported installer format %s\n", format)
 	}
 }

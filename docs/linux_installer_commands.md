@@ -2,8 +2,30 @@
 
 ## Build the Go executable
 
+Depends on `libpcap-dev` for libpcap header files.
+
+```bash
+# Ubuntu
+sudo apt-get install libpcap-dev
+
+# Fedora or similar
+sudo dnf install libpcap-devel
+```
+
 ```bash
 ./scripts/build linux <amd64|arm64>
+```
+
+## Installer Pre-requisites
+
+While packages `libpcap-dev`/`libpcap-devel` fulfill the build-time dependencies, there is still a runtime dependency on libpcap:
+
+```bash
+# Ubuntu
+sudo apt-get install libpcap0.8
+
+# Fedora or similar
+sudo dnf install libpcap
 ```
 
 ## .deb Installer

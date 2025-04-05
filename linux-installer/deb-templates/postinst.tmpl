@@ -16,6 +16,27 @@ chmod 0755 "{{ .BinFile }}"
 chown root:root "{{ .SystemdServiceFilePath }}"
 chmod 0644 "{{ .SystemdServiceFilePath }}"
 
+is_libpcap_installed() {
+    echo "Checking for libpcap installation"
+    if dpkg -l | grep -E '^ii[[:space:]]+libpcap0\.8' > /dev/null; then
+        echo "Found libpcap via package manager"
+        return 0
+    fi
+
+    echo "libpcap not found."
+    return 1
+}
+
+is_libpcap_installed
+libpcap_installed=$?
+
+if [ $libpcap_installed -eq 0 ]; then
+    echo "libpcap is installed, proceeding with installation"
+else
+    echo "libpcap is NOT installed. Please install libpcap0.8 before continuing."
+    exit 1
+fi
+
 # Prompt user for install key if not provided
 if [ ! -f "{{ .BootstrapFile }}" ]; then
     echo "Please enter the install key:"
