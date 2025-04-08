@@ -5,6 +5,8 @@ package os
 import (
 	"context"
 	"log/slog"
+	"os/exec"
+	"strings"
 )
 
 type darwinSystemInfo struct {
@@ -20,5 +22,19 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 }
 
 func (dsi *darwinSystemInfo) GetUniqueSystemIdentifier() (string, error) {
-	return "", nil
+	out, err := exec.Command("/usr/sbin/ioreg", "-l").Output()
+	if err != nil {
+		dsi.logger.Error("failed to get system identifier", "error", err)
+		return "", err
+	}
+	serialNumber := ""
+	for _, l := range strings.Split(string(out), "\n") {
+		if strings.Contains(l, "IOPlatformSerialNumber") {
+			s := strings.Split(l, " ")
+			serialNumber = s[len(s)-1]
+			serialNumber = strings.Trim(serialNumber, "\"")
+			break
+		}
+	}
+	return serialNumber, nil
 }
