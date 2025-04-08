@@ -5,17 +5,12 @@ import (
 	"runtime"
 
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/danielhoward314/packet-sentry/internal/config"
 )
 
-func getLogFilePath() string {
-	if runtime.GOOS == "windows" {
-		return `C:\Program Files\PacketSentry\packet-sentry-agent.log`
-	}
-	return "/var/log/packet-sentry-agent.log"
-}
-
 func GetBaseLogger() *slog.Logger {
-	logFilePath := getLogFilePath()
+	logFilePath := config.GetLogFilePath()
 
 	rotatingLog := &lumberjack.Logger{
 		Filename:   logFilePath,

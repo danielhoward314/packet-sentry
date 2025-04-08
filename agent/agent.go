@@ -3,15 +3,19 @@ package agent
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	psPCap "github.com/danielhoward314/packet-sentry/internal/pcap"
+	"github.com/danielhoward314/packet-sentry/internal/transport"
 )
 
 type Agent struct {
-	BaseLogger  *slog.Logger
-	Ctx         context.Context
-	PCapManager psPCap.PCapManager
+	BaseLogger         *slog.Logger
+	CertificateManager transport.CertificateManager
+	Ctx                context.Context
+	MTLSClient         *http.Client
+	PCapManager        psPCap.PCapManager
 }
 
 func NewAgent() *Agent {
@@ -21,9 +25,15 @@ func NewAgent() *Agent {
 	}
 }
 
-func (agent *Agent) InjectDependencies(pcapManager psPCap.PCapManager) {
+func (agent *Agent) InjectDependencies(
+	certManager transport.CertificateManager,
+	mTLSClient *http.Client,
+	pcapManager psPCap.PCapManager,
+) {
 	agent.BaseLogger.With(psLog.KeyFunction, "Agent.InjectDependencies")
 	agent.BaseLogger.Info("injecting agent dependencies")
+	agent.CertificateManager = certManager
+	agent.MTLSClient = mTLSClient
 	agent.PCapManager = pcapManager
 }
 

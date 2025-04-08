@@ -21,7 +21,7 @@ const (
 // PCapManager is the interface for managing packet capture for all interfaces and associated filters.
 type PCapManager interface {
 	EnsureReady() error
-	RemoveCapture(ifaceName string, filter string) error
+	StopOne(ifaceName string, filter string) error
 	StartAll()
 	StopAll()
 }
@@ -88,9 +88,9 @@ func (m *pcapManager) EnsureReady() error {
 	return nil
 }
 
-// RemoveCapture stops and removes a capture for the given interface name for the given filter
-func (m *pcapManager) RemoveCapture(ifaceName string, filter string) error {
-	m.logger.With(psLog.KeyFunction, "PCapManager.RemoveCapture")
+// StopOne stops and removes a capture for the given interface name for the given filter
+func (m *pcapManager) StopOne(ifaceName string, filter string) error {
+	m.logger.With(psLog.KeyFunction, "PCapManager.StopOne")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

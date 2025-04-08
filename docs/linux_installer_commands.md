@@ -2,7 +2,7 @@
 
 ## Build the Go executable
 
-Depends on `libpcap-dev` for libpcap header files.
+Depends on `libpcap-dev`/`libpcap-devel` for libpcap header files.
 
 ```bash
 # Ubuntu
