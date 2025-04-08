@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -23,7 +24,9 @@ func initializeAgent(psAgent *agent.Agent) error {
 	certCh := make(chan error, 1)
 	pcapCh := make(chan error, 1)
 	timeout := 2 * time.Minute
+	goRoutinesCount := 0
 
+	goRoutinesCount++
 	go func() {
 		psAgent.BaseLogger.Info("ensuring client certificate is in place for mTLS")
 		err := certManager.HasValidCert()
@@ -41,6 +44,7 @@ func initializeAgent(psAgent *agent.Agent) error {
 		certCh <- err
 	}()
 
+	goRoutinesCount++
 	go func() {
 		psAgent.BaseLogger.Info("ensuring pcap manager is ready")
 		err := pcapManager.EnsureReady()
@@ -55,22 +59,23 @@ func initializeAgent(psAgent *agent.Agent) error {
 
 	var certErr, pcapErr error
 
-	select {
-	case certErr = <-certCh:
-		psAgent.BaseLogger.Info("certificate initialization completed", "error", certErr)
-	case <-timer.C:
-		return fmt.Errorf("timeout waiting for certificate initialization")
+	psAgent.BaseLogger.Info("processing goroutines with multi-select, will loop until finished or timeout", slog.Int("goroutinesCount", goRoutinesCount))
+	done := 0
+	for done < goRoutinesCount {
+		select {
+		case certErr = <-certCh:
+			psAgent.BaseLogger.Info("certificate initialization completed", "error", certErr)
+			done++
+		case pcapErr = <-pcapCh:
+			psAgent.BaseLogger.Info("pcap initialization completed", "error", pcapErr)
+			done++
+		case <-timer.C:
+			return fmt.Errorf("timeout waiting for dependency initialization")
+		}
 	}
 
 	if certErr != nil {
 		return fmt.Errorf("certificate initialization failed: %w", certErr)
-	}
-
-	select {
-	case pcapErr = <-pcapCh:
-		psAgent.BaseLogger.Info("pcap initialization completed", "error", pcapErr)
-	case <-timer.C:
-		return fmt.Errorf("timeout waiting for pcap initialization")
 	}
 
 	if pcapErr != nil {
