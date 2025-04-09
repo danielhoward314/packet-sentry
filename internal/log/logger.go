@@ -9,6 +9,7 @@ import (
 	"github.com/danielhoward314/packet-sentry/internal/config"
 )
 
+// GetBaseLogger returns the base instance of the structured logger
 func GetBaseLogger() *slog.Logger {
 	logFilePath := config.GetLogFilePath()
 

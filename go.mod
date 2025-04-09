@@ -10,4 +10,4 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
-require golang.org/x/net v0.33.0 // indirect
+require golang.org/x/net v0.36.0 // indirect

@@ -22,6 +22,7 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 	}
 }
 
+// // GetUniqueSystemIdentifier is the windows implementation for getting a unique system identifier
 func (wsi *windowsSystemInfo) GetUniqueSystemIdentifier() (string, error) {
 	// https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
 	// This value comes from the UUID member of the System Information structure in the SMBIOS information.

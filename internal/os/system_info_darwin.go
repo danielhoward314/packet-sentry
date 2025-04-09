@@ -21,6 +21,7 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 	}
 }
 
+// GetUniqueSystemIdentifier is the darwin implementation for getting a unique system identifier
 func (dsi *darwinSystemInfo) GetUniqueSystemIdentifier() (string, error) {
 	out, err := exec.Command("/usr/sbin/ioreg", "-l").Output()
 	if err != nil {

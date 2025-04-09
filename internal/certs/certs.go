@@ -1,4 +1,4 @@
-package transport
+package certs
 
 import (
 	"bytes"
@@ -17,8 +17,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/danielhoward314/packet-sentry/internal/broadcast"
 	"github.com/danielhoward314/packet-sentry/internal/config"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	psOS "github.com/danielhoward314/packet-sentry/internal/os"
@@ -33,96 +35,146 @@ const (
 	pemBlockTypeRSAPrivateKey      = "RSA PRIVATE KEY"
 )
 
+// CertificateManager is the manager interface for certificate and mTLS client operations
 type CertificateManager interface {
-	HasValidCert() error
-	RequestCert(isRenewal bool) error
-	GetMTLSClient() (*http.Client, error)
+	Init() error
+	Start()
+	Stop()
 }
 
 type certificateManager struct {
-	ctx           context.Context
-	caCert        *x509.Certificate
-	clientCert    *x509.Certificate
-	clientPrivKey *rsa.PrivateKey
-	logger        *slog.Logger
-	systemInfo    psOS.SystemInfo
+	caCert                *x509.Certificate
+	certCheckInterval     time.Duration
+	clientCert            *x509.Certificate
+	clientPrivKey         *rsa.PrivateKey
+	ctx                   context.Context
+	logger                *slog.Logger
+	mTLSClientBroadcaster *broadcast.MTLSClientBroadcaster
+	shutdownChannel       chan struct{}
+	systemInfo            psOS.SystemInfo
+	wg                    sync.WaitGroup
 }
 
-func NewCertificateManager(ctx context.Context, baseLogger *slog.Logger, systemInfo psOS.SystemInfo) CertificateManager {
+// NewCertificateManager returns an implementation of the CertificateManager interface
+func NewCertificateManager(ctx context.Context, baseLogger *slog.Logger, systemInfo psOS.SystemInfo, mtlsClientBroadCaster *broadcast.MTLSClientBroadcaster) CertificateManager {
 	childLogger := baseLogger.With(slog.String(psLog.KeyServiceName, logAttrValSvcName))
 	return &certificateManager{
-		ctx:        ctx,
-		logger:     childLogger,
-		systemInfo: systemInfo,
+		certCheckInterval:     config.GetCertCheckInterval(),
+		ctx:                   ctx,
+		logger:                childLogger,
+		mTLSClientBroadcaster: mtlsClientBroadCaster,
+		shutdownChannel:       make(chan struct{}),
+		systemInfo:            systemInfo,
 	}
 }
 
-// CertExpiringSoonError represents a warning that a cert is close to expiration.
+// CertExpiringSoonError is a custom error type signaling that a cert is close to expiration.
 type CertExpiringSoonError struct {
 	NotAfter        time.Time
 	DaysUntilExpiry float64
 }
 
+// Error implements the Error interface for the CertExpiringSoonError
 func (e *CertExpiringSoonError) Error() string {
 	return fmt.Sprintf("certificate is expiring soon: in %.0f days on %s", e.DaysUntilExpiry, e.NotAfter)
 }
 
+// Bootstrap represents the contents of the agentBootstrap.json file
 type Bootstrap struct {
 	InstallKey string `json:"installKey"`
 }
 
+// CertificateRequest represents the request body sent to the `/certificates` endpoint
+// issued for first-time and renewal client certificate requests
 type CertificateRequest struct {
 	CSR                     string `json:"csr"`
 	ExistingCertFingerprint string `json:"existingCertFingerprint,omitempty"`
 }
 
+// CertificateResponse represents the expected response body for `/certificates` requests
 type CertificateResponse struct {
 	ClientCertificate string `json:"clientCertificate"` // PEM-encoded certificate bytes
 	CACertificate     string `json:"caCertificate"`     // PEM-encoded certificate bytes
 }
 
-func (cm *certificateManager) getCertFromDisk() (*x509.Certificate, error) {
+func (cm *certificateManager) getCertFromDisk(filePath string) (*x509.Certificate, error) {
 	cm.logger.With(psLog.KeyFunction, "CertificateManager.getCertFromDisk")
 
-	pemBytes, err := os.ReadFile(config.GetClientCertFilePath())
+	pemBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	cm.logger.Info("decoding client certificate PEM blocks")
+	cm.logger.Info("decoding certificate PEM blocks")
 	pemBlocks := make([]*pem.Block, 0)
 	for {
 		pemBlock, rest := pem.Decode(pemBytes)
 		if pemBlock == nil {
-			return nil, fmt.Errorf("failed to decode PEM block of client certificate")
+			return nil, fmt.Errorf("failed to decode PEM block of certificate")
 		}
 		pemBlocks = append(pemBlocks, pemBlock)
 		if len(rest) == 0 {
 			break
 		}
 	}
-	cm.logger.Info("validating client certificate PEM block")
+	cm.logger.Info("validating certificate PEM block")
 	if len(pemBlocks) > 1 {
-		return nil, fmt.Errorf("found more than one PEM block in client certificate")
+		return nil, fmt.Errorf("found more than one PEM block in certificate")
 	}
 	if pemBlocks[0].Type != pemBlockTypeCertificate {
-		return nil, fmt.Errorf("found incorrect PEM block type in client certificate")
+		return nil, fmt.Errorf("found incorrect PEM block type in certificate")
 	}
-	cm.logger.Info("parsing client certificate PEM block")
+	cm.logger.Info("parsing certificate PEM block")
 	cert, err := x509.ParseCertificate(pemBlocks[0].Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse PEM bytes of client certificate")
+		return nil, fmt.Errorf("failed to parse PEM bytes of certificate")
 	}
 
 	return cert, nil
 }
 
-func (cm *certificateManager) HasValidCert() error {
-	cm.logger.With(psLog.KeyFunction, "CertificateManager.HasValidCert")
+func (cm *certificateManager) getPrivateKeyFromDisk(filepath string) (*rsa.PrivateKey, error) {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.getPrivateKeyFromDisk")
+
+	cm.logger.Info("reading client private key from disk")
+	pemBytes, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	cm.logger.Info("decoding client private key PEM blocks")
+	pemBlocks := make([]*pem.Block, 0)
+	for {
+		pemBlock, rest := pem.Decode(pemBytes)
+		if pemBlock == nil {
+			return nil, fmt.Errorf("failed to decode PEM block of client private key")
+		}
+		pemBlocks = append(pemBlocks, pemBlock)
+		if len(rest) == 0 {
+			break
+		}
+	}
+	cm.logger.Info("validating client private key PEM block")
+	if len(pemBlocks) > 1 {
+		return nil, fmt.Errorf("found more than one PEM block in client private key")
+	}
+	if pemBlocks[0].Type != pemBlockTypeRSAPrivateKey {
+		return nil, fmt.Errorf("found incorrect PEM block type in client private key")
+	}
+	cm.logger.Info("parsing client private key PEM block")
+	privKey, err := x509.ParsePKCS1PrivateKey(pemBlocks[0].Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse PEM bytes of client private key")
+	}
+	return privKey, nil
+}
+
+func (cm *certificateManager) hasValidCert() error {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.hasValidCert")
 
 	if cm.clientCert == nil {
 		cm.logger.Info("client cert not in-memory, reading client certificate from disk")
-		cert, err := cm.getCertFromDisk()
+		cert, err := cm.getCertFromDisk(config.GetClientCertFilePath())
 		if err != nil {
 			return fmt.Errorf("failed to get client certificate from disk")
 		}
@@ -151,60 +203,28 @@ func (cm *certificateManager) HasValidCert() error {
 	return nil
 }
 
-func (cm *certificateManager) RequestCert(isRenewal bool) error {
-	cm.logger.With(psLog.KeyFunction, "CertificateManager.RequestCert")
-
-	cm.logger.Info("getting unique system identifier")
-	uniqueSystemID, err := cm.systemInfo.GetUniqueSystemIdentifier()
-	if err != nil {
-		return err
-	}
+func (cm *certificateManager) requestCert(isRenewal bool) error {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.requestCert")
 
 	var csrTemplate *x509.CertificateRequest
 	var privKey *rsa.PrivateKey
+	var err error
 
 	if isRenewal {
 		cm.logger.Info("renewing client certificate")
-		// should already be in-memory from previous HasValidCert call
 		if cm.clientCert == nil {
 			cm.logger.Info("client cert not in-memory, reading from disk")
-			cert, err := cm.getCertFromDisk()
+			cert, err := cm.getCertFromDisk(config.GetClientCertFilePath())
 			if err != nil {
 				return fmt.Errorf("failed to get client certificate from disk")
 			}
 			cm.clientCert = cert
 		}
-
-		cm.logger.Info("reading client private key from disk")
-		pemBytes, err := os.ReadFile(config.GetPrivateKeyFilePath())
+		privKey, err = cm.getPrivateKeyFromDisk(config.GetPrivateKeyFilePath())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get client private key from disk")
 		}
-
-		cm.logger.Info("decoding client private key PEM blocks")
-		pemBlocks := make([]*pem.Block, 0)
-		for {
-			pemBlock, rest := pem.Decode(pemBytes)
-			if pemBlock == nil {
-				return fmt.Errorf("failed to decode PEM block of client private key")
-			}
-			pemBlocks = append(pemBlocks, pemBlock)
-			if len(rest) == 0 {
-				break
-			}
-		}
-		cm.logger.Info("validating client private key PEM block")
-		if len(pemBlocks) > 1 {
-			return fmt.Errorf("found more than one PEM block in client private key")
-		}
-		if pemBlocks[0].Type != pemBlockTypeRSAPrivateKey {
-			return fmt.Errorf("found incorrect PEM block type in client private key")
-		}
-		cm.logger.Info("parsing client private key PEM block")
-		privKey, err = x509.ParsePKCS1PrivateKey(pemBlocks[0].Bytes)
-		if err != nil {
-			return fmt.Errorf("failed to parse PEM bytes of client private key")
-		}
+		cm.clientPrivKey = privKey
 	} else {
 		cm.logger.Info("requesting first client certificate, creating private key")
 		privKey, err = rsa.GenerateKey(rand.Reader, 2048)
@@ -221,9 +241,14 @@ func (cm *certificateManager) RequestCert(isRenewal bool) error {
 		if err != nil {
 			return err
 		}
+		cm.clientPrivKey = privKey
 	}
 
-	cm.clientPrivKey = privKey
+	cm.logger.Info("getting unique system identifier")
+	uniqueSystemID, err := cm.systemInfo.GetUniqueSystemIdentifier()
+	if err != nil {
+		return err
+	}
 
 	csrTemplate = &x509.CertificateRequest{
 		Subject: pkix.Name{
@@ -389,15 +414,30 @@ func (cm *certificateManager) RequestCert(isRenewal bool) error {
 	return nil
 }
 
-func (cm *certificateManager) GetMTLSClient() (*http.Client, error) {
+func (cm *certificateManager) getMTLSClient() (*http.Client, error) {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.getMTLSClient")
+
+	cm.logger.Info("instantiating mTLS client")
 	if cm.clientCert == nil {
-		return nil, fmt.Errorf("cannot create mTLS client with nil client certificate")
+		clientCert, err := cm.getCertFromDisk(config.GetClientCertFilePath())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mTLS client due to missing client cert, private key, or CA cert")
+		}
+		cm.clientCert = clientCert
 	}
 	if cm.clientPrivKey == nil {
-		return nil, fmt.Errorf("cannot create mTLS client with nil client private key")
+		clientPrivKey, err := cm.getPrivateKeyFromDisk(config.GetPrivateKeyFilePath())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mTLS client due to missing client cert, private key, or CA cert")
+		}
+		cm.clientPrivKey = clientPrivKey
 	}
 	if cm.caCert == nil {
-		return nil, fmt.Errorf("cannot create mTLS client with nil CA certificate")
+		caCert, err := cm.getCertFromDisk(config.GetCACertFilePath())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mTLS client due to missing client cert, private key, or CA cert")
+		}
+		cm.caCert = caCert
 	}
 
 	tlsCert := tls.Certificate{
@@ -415,9 +455,120 @@ func (cm *certificateManager) GetMTLSClient() (*http.Client, error) {
 		RootCAs:            rootCAs,
 	}
 
-	return &http.Client{
+	mTLSClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-	}, nil
+	}
+
+	cm.logger.Info("testing mTLS communication with server")
+	// TODO: env-based config of base URL
+	res, err := mTLSClient.Get("https://localhost:9443/mtls-test")
+	if err != nil {
+		cm.logger.Error("mTLS request failed", psLog.KeyError, err)
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		err = fmt.Errorf("mTLS response status is non-200: %d", res.StatusCode)
+		cm.logger.Error("failed mTLS readiness check", psLog.KeyError, err)
+		return nil, err
+	}
+
+	cm.logger.Info("mTLS client and server communication successful")
+	return mTLSClient, nil
+}
+
+// Init is called during startup to create and publish an mTLS client.
+// It does this by either:
+//
+//	requesting the first-time client cert
+//	renewing the cert when near expiry
+//	using the existing cert on disk when not near expiry
+func (cm *certificateManager) Init() error {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.Init")
+	err := cm.hasValidCert()
+	if err != nil {
+		isRenewal := false
+		switch err.(type) {
+		case *CertExpiringSoonError:
+			cm.logger.Warn("client certificate will expire within 30 days, requesting renewal")
+			isRenewal = true
+		default:
+			cm.logger.Warn("failed to find client certificate on disk, assuming this is first client cert request")
+		}
+		err = cm.requestCert(isRenewal)
+		if err != nil {
+			cm.logger.Error("failed to get client certificate from server", psLog.KeyError, err)
+			return err
+		}
+	}
+
+	mTLSClient, err := cm.getMTLSClient()
+	if err != nil {
+		cm.logger.Error("failed to get mTLS client", psLog.KeyError, err)
+		return err
+	}
+	cm.mTLSClientBroadcaster.Publish(mTLSClient)
+
+	return nil
+}
+
+// Start is the certManager goroutine that periodically checks cert validity
+// and performs similar work to Init, except it can skip creating and publishing an mTLS client
+// when the existing cert is still valid
+func (cm *certificateManager) Start() {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.Start")
+	cm.logger.Info("starting certificate manager")
+
+	cm.wg.Add(1)
+	go func() {
+		defer cm.wg.Done()
+		for {
+			select {
+			case <-time.After(cm.certCheckInterval):
+				cm.logger.Info("cert check interval elapsed, checking validity of existing cert")
+				err := cm.hasValidCert()
+				// unlike Init, which must publish an mTLS client as part of the startup sequence,
+				// Start can skip the rest of this work when we have a valid cert
+				if err == nil {
+					continue
+				}
+
+				isRenewal := false
+				switch err.(type) {
+				case *CertExpiringSoonError:
+					cm.logger.Warn("client certificate will expire within 30 days, requesting renewal")
+					isRenewal = true
+				default:
+					cm.logger.Warn("failed to find client certificate on disk, assuming this is first client cert request")
+				}
+				err = cm.requestCert(isRenewal)
+				if err != nil {
+					cm.logger.Error("failed to get client certificate from server", psLog.KeyError, err)
+					continue
+				}
+
+				mTLSClient, err := cm.getMTLSClient()
+				if err != nil {
+					cm.logger.Error("failed to get mTLS client", psLog.KeyError, err)
+					continue
+				}
+				cm.mTLSClientBroadcaster.Publish(mTLSClient)
+			case <-cm.shutdownChannel:
+				return
+			}
+		}
+	}()
+}
+
+// Stop closes the shutdown channel and blocks until wait group is Done.
+// The Start goroutine reacts to closed shutdown channel by returning,
+// which triggers the deferred `cm.wg.Done()` call and unblocks Stop.
+func (cm *certificateManager) Stop() {
+	cm.logger.With(psLog.KeyFunction, "CertificateManager.Stop")
+	cm.logger.Info("stopping certificate manager")
+	close(cm.shutdownChannel)
+	cm.wg.Wait()
 }

@@ -22,6 +22,7 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 	}
 }
 
+// GetUniqueSystemIdentifier is the linux implementation for getting a unique system identifier
 func (lsi *linuxSystemInfo) GetUniqueSystemIdentifier() (string, error) {
 	paths := []string{
 		"/etc/machine-id",

@@ -3,6 +3,7 @@ package config
 import (
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 // GetInstallDir returns the installation directory of the Packet Sentry agent
@@ -56,4 +57,9 @@ func GetCACertFilePath() string {
 		return filepath.Join(installDir, "ca.crt")
 	}
 	return "/opt/packet-sentry/ca.crt"
+}
+
+// GetCertCheckInterval returns the interval at which we should check whether the client cert needs to renew
+func GetCertCheckInterval() time.Duration {
+	return 1 * time.Minute
 }
