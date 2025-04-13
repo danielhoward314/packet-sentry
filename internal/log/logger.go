@@ -26,8 +26,7 @@ func GetBaseLogger() *slog.Logger {
 	})
 
 	logger := slog.New(handler)
-	logger.With(KeyArch, runtime.GOARCH)
-	logger.With(KeyOS, runtime.GOOS)
+	logger = logger.With(KeyArch, runtime.GOARCH, KeyOS, runtime.GOOS)
 	slog.SetDefault(logger)
 	return logger
 }

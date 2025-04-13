@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"os/exec"
 	"strings"
+
+	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 )
 
 type windowsSystemInfo struct {
@@ -24,6 +26,9 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 
 // // GetUniqueSystemIdentifier is the windows implementation for getting a unique system identifier
 func (wsi *windowsSystemInfo) GetUniqueSystemIdentifier() (string, error) {
+	logger := wsi.logger.With(psLog.KeyFunction, "windowsSystemInfo.GetUniqueSystemIdentifier")
+	logger.Info("getting unique system identifier")
+
 	// https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
 	// This value comes from the UUID member of the System Information structure in the SMBIOS information.
 	cmd := exec.Command("powershell", "-Command", "Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty UUID")

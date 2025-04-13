@@ -61,5 +61,19 @@ func GetCACertFilePath() string {
 
 // GetCertCheckInterval returns the interval at which we should check whether the client cert needs to renew
 func GetCertCheckInterval() time.Duration {
+	return 5 * time.Minute
+}
+
+// GetPollInterval returns the poll interval
+func GetPollInterval() time.Duration {
 	return 1 * time.Minute
+}
+
+// GetBPFConfigFilePath returns the path of cached on-disk BPF config
+func GetBPFConfigFilePath() string {
+	if runtime.GOOS == "windows" {
+		installDir := GetInstallDir()
+		return filepath.Join(installDir, "bpfConfig.json")
+	}
+	return "/opt/packet-sentry/bpfConfig.json"
 }

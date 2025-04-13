@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os/exec"
 	"strings"
+
+	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 )
 
 type darwinSystemInfo struct {
@@ -23,6 +25,9 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 
 // GetUniqueSystemIdentifier is the darwin implementation for getting a unique system identifier
 func (dsi *darwinSystemInfo) GetUniqueSystemIdentifier() (string, error) {
+	logger := dsi.logger.With(psLog.KeyFunction, "darwinSystemInfo.GetUniqueSystemIdentifier")
+	logger.Info("getting unique system identifier")
+
 	out, err := exec.Command("/usr/sbin/ioreg", "-l").Output()
 	if err != nil {
 		dsi.logger.Error("failed to get system identifier", "error", err)

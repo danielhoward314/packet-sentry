@@ -18,9 +18,11 @@ type MTLSClientBroadcaster struct {
 	last *http.Client
 }
 
-// NewMTLSClientBroadcaster returns an instance of the MTLSBroadcaster
+// NewMTLSClientBroadcaster returns an instance of the MTLSClientBroadcaster
 func NewMTLSClientBroadcaster() *MTLSClientBroadcaster {
-	return &MTLSClientBroadcaster{}
+	return &MTLSClientBroadcaster{
+		subs: make([]chan MTLSClientUpdate, 0),
+	}
 }
 
 // Subscribe is the method subscribers call to receive the latest mTLS client

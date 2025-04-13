@@ -9,6 +9,8 @@ const (
 	KeyBPFHash = "bpfHash"
 	// KeyCaptureConfig is the key name constant "captureConfig" for use in the structured logger
 	KeyCaptureConfig = "captureConfig"
+	// KeyCommand is the key name constant "command" for use in the structured logger
+	KeyCommand = "command"
 	// KeyDeviceName is the key name constant "deviceName" for use in the structured logger
 	KeyDeviceName = "deviceName"
 	// KeyDroppedPacket is the key name constant "droppedPacket" for use in the structured logger
@@ -27,6 +29,10 @@ const (
 	KeyServiceName = "serviceName"
 	// KeySnapLen is the key name constant "snapLen" for use in the structured logger
 	KeySnapLen = "snapLen"
+	// KeyStatus is the key name constant "status" for use in the structured logger
+	KeyStatus = "status"
 	// KeyTimeout is the key name constant "timeout" for use in the structured logger
 	KeyTimeout = "timeout"
+	// KeyURI is the key name constant "uri" for use in the structured logger
+	KeyURI = "uri"
 )

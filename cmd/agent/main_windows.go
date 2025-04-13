@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
@@ -39,70 +38,84 @@ func (m *psService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 	}
 	psAgent.BaseLogger.Info("initializing agent")
 
-	initDone := make(chan error, 1)
-	go func() {
-		initDone <- initializeAgent(psAgent)
-	}()
-
-	select {
-	case err := <-initDone:
-		if err != nil {
-			psAgent.BaseLogger.Error("initialization failed", psLog.KeyError, err)
-			return false, 1
-		}
-	case <-time.After(25 * time.Second):
-		psAgent.BaseLogger.Warn("initialization is slow, proceeding with startup")
+	err := initializeAgent(psAgent)
+	if err != nil {
+		psAgent.BaseLogger.Error("failed to initialize agent", psLog.KeyError, err)
+		panic(fmt.Sprintf("main: could not initialize agent due to %s", err))
 	}
 
-	// Mark service as running and accept stop/pause/continue
 	s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
 	psAgent.BaseLogger.Info("started Windows service", psLog.KeyServiceName, serviceName)
 
-	// Start the agent in a goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	shutdownChan := make(chan struct{})
+
+	// Start agent in background
 	go func() {
+		defer wg.Done()
 		err := psAgent.Start()
 		if err != nil {
 			psAgent.BaseLogger.Error("failed to start agent", psLog.KeyError, err)
-			s <- svc.Status{State: svc.Stopped}
+			psAgent.BaseLogger.Info("agent.Start() errored, calling agent.Stop()")
+			psAgent.Stop()
+			select {
+			case shutdownChan <- struct{}{}:
+			default:
+			}
 		}
+		psAgent.BaseLogger.Info("main agent.Start is exiting")
 	}()
 
 	// Service Control Loop
-	for c := range r {
-		switch c.Cmd {
-		case svc.Interrogate:
-			psAgent.BaseLogger.Info("Windows Service Control Manager is interrogating service state")
-			s <- c.CurrentStatus
+	go func() {
+		for c := range r {
+			switch c.Cmd {
+			case svc.Interrogate:
+				psAgent.BaseLogger.Info("Windows SCM is interrogating service state")
+				s <- c.CurrentStatus
 
-		case svc.Stop, svc.Shutdown:
-			psAgent.BaseLogger.Info("Windows Service Control Manager sent stop or shutdown, stopping service")
-			psAgent.Stop()
-			s <- svc.Status{State: svc.Stopped}
-			return false, 0
+			case svc.Stop, svc.Shutdown:
+				psAgent.BaseLogger.Info("Windows SCM sent stop/shutdown, stopping agent")
+				psAgent.Stop()
+				select {
+				case shutdownChan <- struct{}{}:
+				default:
+				}
+				return
 
-		case svc.Pause:
-			pauseLock.Lock()
-			if !isPaused {
-				isPaused = true
-				s <- svc.Status{State: svc.Paused, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
-				psAgent.BaseLogger.Info("Windows Service Control Manager is pausing the service")
+			case svc.Pause:
+				pauseLock.Lock()
+				if !isPaused {
+					isPaused = true
+					s <- svc.Status{State: svc.Paused, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
+					psAgent.BaseLogger.Info("pausing service")
+				}
+				pauseLock.Unlock()
+
+			case svc.Continue:
+				pauseLock.Lock()
+				if isPaused {
+					isPaused = false
+					s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
+					psAgent.BaseLogger.Info("resuming service")
+				}
+				pauseLock.Unlock()
+
+			default:
+				psAgent.BaseLogger.Warn("unexpected control request", "serviceControlRequest", c.Cmd)
 			}
-			pauseLock.Unlock()
-
-		case svc.Continue:
-			pauseLock.Lock()
-			if isPaused {
-				isPaused = false
-				s <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue}
-				psAgent.BaseLogger.Info("Windows Service Control Manager is resuming the service")
-			}
-			pauseLock.Unlock()
-
-		default:
-			psAgent.BaseLogger.Warn("unexpected control request", "serviceControlRequest", c.Cmd)
 		}
-	}
+	}()
 
+	// block until either svc.Stop|svc.Shutdown (Windows SCM) or agent start failure
+	<-shutdownChan
+
+	// Wait for agent goroutine to complete
+	wg.Wait()
+	psAgent.BaseLogger.Info("agent shutdown complete")
+	s <- svc.Status{State: svc.Stopped}
 	return false, 0
 }
 

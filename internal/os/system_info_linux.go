@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 )
 
 type linuxSystemInfo struct {
@@ -24,6 +26,8 @@ func newSystemInfo(ctx context.Context, logger *slog.Logger) SystemInfo {
 
 // GetUniqueSystemIdentifier is the linux implementation for getting a unique system identifier
 func (lsi *linuxSystemInfo) GetUniqueSystemIdentifier() (string, error) {
+	logger := lsi.logger.With(psLog.KeyFunction, "linuxSystemInfo.GetUniqueSystemIdentifier")
+	logger.Info("getting unique system identifier")
 	paths := []string{
 		"/etc/machine-id",
 		"/var/lib/dbus/machine-id", // fallback
