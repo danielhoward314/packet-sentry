@@ -64,6 +64,7 @@ func (pc *packetCapture) Start() error {
 	}
 
 	go func() {
+		// will be called when context is canceled and we exit this goroutine
 		defer pc.cleanup()
 		packetSource := gopacket.NewPacketSource(pc.handle, pc.handle.LinkType())
 		packetChan := packetSource.Packets()

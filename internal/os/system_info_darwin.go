@@ -35,6 +35,9 @@ func (dsi *darwinSystemInfo) GetUniqueSystemIdentifier() (string, error) {
 	}
 	serialNumber := ""
 	for _, l := range strings.Split(string(out), "\n") {
+		// Example output:
+		// /usr/sbin/ioreg -l | grep IOPlatformSerialNumber
+		//     |   "IOPlatformSerialNumber" = "<serial-number>"
 		if strings.Contains(l, "IOPlatformSerialNumber") {
 			s := strings.Split(l, " ")
 			serialNumber = s[len(s)-1]

@@ -23,6 +23,7 @@ type Agent struct {
 	stopOnce           sync.Once
 }
 
+// NewAgent creates a new agent instance with the minimum required dependencies.
 func NewAgent() *Agent {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -33,6 +34,7 @@ func NewAgent() *Agent {
 	}
 }
 
+// InjectDependencies injects dependencies into the agent, including all managers.
 func (agent *Agent) InjectDependencies(
 	certManager certs.CertificateManager,
 	pcapManager psPCap.PCapManager,
@@ -45,6 +47,7 @@ func (agent *Agent) InjectDependencies(
 	agent.PCapManager = pcapManager
 }
 
+// Start is called to start the goroutines of all of the managers.
 func (agent *Agent) Start() (err error) {
 	logger := agent.BaseLogger.With(psLog.KeyFunction, "Agent.Start")
 
@@ -69,9 +72,9 @@ func (agent *Agent) Start() (err error) {
 		agent.PollManager.Start()
 	}()
 
-	// block until agent's context is cancelled
+	// block until agent's context is canceled
 	<-agent.Ctx.Done()
-	logger.Info("agent context cancelled, shutting down managers")
+	logger.Info("agent context canceled, shutting down managers")
 	// Wait for all manager goroutines to exit
 	wg.Wait()
 

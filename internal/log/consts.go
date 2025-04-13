@@ -1,5 +1,6 @@
 package log
 
+// structured logger key name constants
 const (
 	// KeyArch is the key name constant "arch" for use in the structured logger
 	KeyArch = "arch"

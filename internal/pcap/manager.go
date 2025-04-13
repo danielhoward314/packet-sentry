@@ -33,7 +33,7 @@ type pcapManager struct {
 	cancelFunc                     context.CancelFunc
 	client                         *http.Client
 	clientMu                       sync.RWMutex
-	command                        *broadcast.Command
+	commandsBroadcaster            *broadcast.CommandsBroadcaster
 	commandMu                      sync.RWMutex
 	ctx                            context.Context
 	ifaceNameToFiltersAssociations map[string]map[uint64]*packetCapture
@@ -42,14 +42,12 @@ type pcapManager struct {
 	mTLSClientBroadcaster          *broadcast.MTLSClientBroadcaster
 	mu                             sync.Mutex
 	packetChan                     chan gopacket.Packet
-	commandsBroadcaster            *broadcast.CommandsBroadcaster
 	pcapVersion                    string
 	stopOnce                       sync.Once
 	wg                             sync.WaitGroup
 }
 
 // NewPCapManager returns a new implementation instance of the PCapManager interface.
-// The method also subscribes to broadcasts and starts the packet uploader goroutine.
 func NewPCapManager(
 	ctx context.Context,
 	baseLogger *slog.Logger,
@@ -185,25 +183,28 @@ func (m *pcapManager) StopOne(ifaceName string, filterHash uint64, filter string
 func (m *pcapManager) StopAll() {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.StopAll")
 
-	logger.Info("stopping pcap manager and stopping any live captures")
+	m.stopOnce.Do(func() {
+		logger.Info("stopping pcap manager and stopping any live captures")
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+		m.mu.Lock()
+		defer m.mu.Unlock()
 
-	for ifaceNameKey, filtersForIFace := range m.ifaceNameToFiltersAssociations {
-		for filterHashKey, packetCapture := range filtersForIFace {
-			logger.Info(
-				"stopping packet capture",
-				slog.String(psLog.KeyDeviceName, ifaceNameKey),
-				slog.String(psLog.KeyBPF, packetCapture.config.BPF),
-				slog.Uint64(psLog.KeyBPFHash, filterHashKey),
-			)
-			packetCapture.Stop()
+		for ifaceNameKey, filtersForIFace := range m.ifaceNameToFiltersAssociations {
+			for filterHashKey, packetCapture := range filtersForIFace {
+				logger.Info(
+					"stopping packet capture",
+					slog.String(psLog.KeyDeviceName, ifaceNameKey),
+					slog.String(psLog.KeyBPF, packetCapture.config.BPF),
+					slog.Uint64(psLog.KeyBPFHash, filterHashKey),
+				)
+				packetCapture.Stop()
+			}
 		}
-	}
 
-	// reset the map
-	m.ifaceNameToFiltersAssociations = make(map[string]map[uint64]*packetCapture)
+		// reset the map
+		m.ifaceNameToFiltersAssociations = make(map[string]map[uint64]*packetCapture)
+		m.cancelFunc()
+	})
 }
 
 func (m *pcapManager) sendInterfaces() error {

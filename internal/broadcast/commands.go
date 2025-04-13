@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	// CommandGetBPFConfig is the command that tells the pcap manager to fetch BPF config from the server
+	// CommandGetBPFConfig tells the pcap manager to fetch BPF config from the server
 	CommandGetBPFConfig = "get_bpf_config"
-	// CommandSendInterfaces is the command that tells the pcap manager to all interfaces available for capture
+	// CommandSendInterfaces tells the pcap manager to send all interfaces available for capture
 	CommandSendInterfaces = "send_interfaces"
 )
 
@@ -42,7 +42,7 @@ func (cb *CommandsBroadcaster) Subscribe() <-chan Command {
 	return ch
 }
 
-// Publish is the method publishers call to publish the latest mTLS client
+// Publish is the method publishers call to publish the latest command received
 func (cb *CommandsBroadcaster) Publish(command *Command) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
