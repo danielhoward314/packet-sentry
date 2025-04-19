@@ -1,14 +1,10 @@
 package pcap
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"sync"
 
 	"github.com/google/gopacket"
@@ -16,6 +12,7 @@ import (
 
 	"github.com/danielhoward314/packet-sentry/internal/broadcast"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
+	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 )
 
 const (
@@ -30,20 +27,23 @@ type PCapManager interface {
 }
 
 type pcapManager struct {
+	agentMTLSClient                pbAgent.AgentServiceClient
+	agentMTLSClientBroadcaster     *broadcast.AgentMTLSClientBroadcaster
+	agentMTLSClientMu              sync.RWMutex
 	cancelFunc                     context.CancelFunc
-	client                         *http.Client
-	clientMu                       sync.RWMutex
 	commandsBroadcaster            *broadcast.CommandsBroadcaster
 	commandMu                      sync.RWMutex
+	currentStreamCancel            context.CancelFunc
 	ctx                            context.Context
 	ifaceNameToFiltersAssociations map[string]map[uint64]*packetCapture
 	interfaces                     map[string]*pcap.Interface
 	logger                         *slog.Logger
-	mTLSClientBroadcaster          *broadcast.MTLSClientBroadcaster
 	mu                             sync.Mutex
 	packetChan                     chan gopacket.Packet
+	packetStreamClient             pbAgent.AgentService_SendPacketEventClient
 	pcapVersion                    string
 	stopOnce                       sync.Once
+	streamMu                       sync.Mutex
 	wg                             sync.WaitGroup
 }
 
@@ -52,19 +52,19 @@ func NewPCapManager(
 	ctx context.Context,
 	baseLogger *slog.Logger,
 	commandsBroadcaster *broadcast.CommandsBroadcaster,
-	mTLSClientBroadcaster *broadcast.MTLSClientBroadcaster,
+	agentMTLSClientBroadcaster *broadcast.AgentMTLSClientBroadcaster,
 ) PCapManager {
 	childCtx, cancelFunc := context.WithCancel(ctx)
 	childLogger := baseLogger.With(slog.String(psLog.KeyServiceName, logAttrValSvcName))
 
 	return &pcapManager{
+		agentMTLSClientBroadcaster:     agentMTLSClientBroadcaster,
 		cancelFunc:                     cancelFunc,
 		commandsBroadcaster:            commandsBroadcaster,
 		ctx:                            childCtx,
 		ifaceNameToFiltersAssociations: make(map[string]map[uint64]*packetCapture),
 		interfaces:                     make(map[string]*pcap.Interface),
 		logger:                         childLogger,
-		mTLSClientBroadcaster:          mTLSClientBroadcaster,
 		packetChan:                     make(chan gopacket.Packet, 500),
 	}
 }
@@ -77,7 +77,7 @@ func NewPCapManager(
 func (m *pcapManager) StartAll() {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.StartAll")
 
-	if m.mTLSClientBroadcaster == nil {
+	if m.agentMTLSClientBroadcaster == nil {
 		fmt.Printf("client broadcaster is nil")
 		return
 	}
@@ -86,15 +86,36 @@ func (m *pcapManager) StartAll() {
 		return
 	}
 
-	clientSubscription := m.mTLSClientBroadcaster.Subscribe()
+	clientSubscription := m.agentMTLSClientBroadcaster.Subscribe()
 	commandsSubscription := m.commandsBroadcaster.Subscribe()
 
 	for {
 		select {
 		case clientUpdate := <-clientSubscription:
-			m.clientMu.Lock()
-			m.client = clientUpdate.Client
-			m.clientMu.Unlock()
+			m.agentMTLSClientMu.Lock()
+			client := pbAgent.NewAgentServiceClient(clientUpdate.ClientConn)
+			m.agentMTLSClient = client
+			m.agentMTLSClientMu.Unlock()
+
+			// If there's an existing stream, cancel it (which should cause CloseSend)
+			m.streamMu.Lock()
+			if m.currentStreamCancel != nil {
+				m.currentStreamCancel()
+			}
+			// Create a new context derived from m.ctx for this stream
+			ctx, cancel := context.WithCancel(m.ctx)
+			// The stream needs its own context and cancel func so that it is distinct each time
+			// and can be canceled any time a client update is received on this channel
+			stream, err := client.SendPacketEvent(ctx)
+			if err != nil {
+				logger.Error("failed to open packet stream", psLog.KeyError, err)
+				m.currentStreamCancel = cancel
+				m.streamMu.Unlock()
+				continue
+			}
+			m.packetStreamClient = stream
+			m.currentStreamCancel = cancel
+			m.streamMu.Unlock()
 		case command := <-commandsSubscription:
 			m.commandMu.Lock()
 			commandName := command.Name
@@ -218,114 +239,61 @@ func (m *pcapManager) sendInterfaces() error {
 		return err
 	}
 
-	reportRequest := &ReportInterfacesRequest{
-		Interfaces:  make([]*InterfaceDetails, 0),
-		PCapVersion: m.pcapVersion,
+	reportRequest := &pbAgent.ReportInterfacesRequest{
+		Interfaces:  make([]*pbAgent.InterfaceDetails, 0),
+		PcapVersion: m.pcapVersion,
 	}
 
 	for _, iface := range interfaces {
 		logger.Info("found device", slog.String(psLog.KeyDeviceName, iface.Name))
 		m.ifaceNameToFiltersAssociations[iface.Name] = make(map[uint64]*packetCapture)
 		m.interfaces[iface.Name] = &iface
-		reportRequest.Interfaces = append(reportRequest.Interfaces, &InterfaceDetails{Name: iface.Name})
+		reportRequest.Interfaces = append(reportRequest.Interfaces, &pbAgent.InterfaceDetails{Name: iface.Name})
 	}
 
-	logger.Info("marshaling request body")
-	bodyJSON, err := json.Marshal(reportRequest)
-	if err != nil {
-		logger.Error("failed to marshal interfaces report", psLog.KeyError, err)
-		return err
-	}
-
-	logger.Info("creating http request")
-	req, err := http.NewRequestWithContext(m.ctx, "POST", "https://localhost:9443/interfaces", bytes.NewBuffer(bodyJSON))
-	if err != nil {
-		logger.Error("failed to create interfaces report http request", psLog.KeyError, err)
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	logger.Info("sending http request", psLog.KeyURI, "/interfaces")
-	m.clientMu.RLock()
-	client := m.client
-	m.clientMu.RUnlock()
+	logger.Info("sending interfaces")
+	m.agentMTLSClientMu.RLock()
+	client := m.agentMTLSClient
+	m.agentMTLSClientMu.RUnlock()
 
 	if client == nil {
-		logger.Warn("no HTTPS client available")
-		return fmt.Errorf("no HTTPS client available")
+		logger.Warn("no agent gRPC client available")
+		return fmt.Errorf("no agent gRPC client available")
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.Error("failed to send interface report", psLog.KeyError, err)
-		return err
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		logger.Error("server returned non-200")
-		return fmt.Errorf("server returned non-200")
-	}
-	return nil
+	_, err = client.ReportInterfaces(m.ctx, reportRequest)
+	return err
 }
 
-func (m *pcapManager) fetchBPFConfig() (*BPFResponse, error) {
+func (m *pcapManager) fetchBPFConfig() (*pbAgent.BPFConfig, error) {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.fetchBPFConfig")
 
-	req, err := http.NewRequestWithContext(m.ctx, http.MethodGet, "https://localhost:9443/bpf", nil)
-	if err != nil {
-		logger.Error("failed to create request", "error", err)
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	logger.Info("sending http request", psLog.KeyURI, "/bpf")
-	m.clientMu.RLock()
-	client := m.client
-	m.clientMu.RUnlock()
+	logger.Info("getting BPF config")
+	m.agentMTLSClientMu.RLock()
+	client := m.agentMTLSClient
+	m.agentMTLSClientMu.RUnlock()
 	if client == nil {
 		logger.Error("no mTLS client available, cannot get BPF config")
-		return nil, err
+		return nil, fmt.Errorf("no agent gRPC client available, cannot get BPF config")
 	}
 
-	resp, err := m.client.Do(req)
+	bpfConfig, err := client.GetBPFConfig(m.ctx, &pbAgent.Empty{})
 	if err != nil {
-		logger.Error("failed to poll server", "error", err)
+		logger.Error("failed to get BPF config", psLog.KeyError, err)
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		logger.Error("received non-200 response from /bpf", psLog.KeyError, resp.Status)
-		return nil, err
-	}
-
-	logger.Info("reading http response body")
-	resBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Error("failed to read response body", psLog.KeyError, err)
-		return nil, err
-	}
-
-	logger.Info("unmarshaling http response body")
-	var bpfResponse BPFResponse
-	err = json.Unmarshal(resBody, &bpfResponse)
-	if err != nil {
-		logger.Error("failed to unmarshal response body", psLog.KeyError, err)
-		return nil, err
-	}
-	return &bpfResponse, nil
+	return bpfConfig, nil
 }
 
-func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
+func (m *pcapManager) enforceConfig(bpfConfig *pbAgent.BPFConfig) error {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.fetchBPFConfig")
 
 	var errs []error
 
 	if len(bpfConfig.Delete) > 0 {
 		for ifaceName, bpfAssociationsToDelete := range bpfConfig.Delete {
-			for filterHash, captureCfg := range bpfAssociationsToDelete {
-				deleteErr := m.StopOne(ifaceName, filterHash, captureCfg.BPF)
+			for filterHash, captureCfg := range bpfAssociationsToDelete.Captures {
+				deleteErr := m.StopOne(ifaceName, filterHash, captureCfg.Bpf)
 				if deleteErr != nil {
 					switch deleteErr.(type) {
 					case *PacketCaptureNotFound:
@@ -340,7 +308,7 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 						logger.Error(
 							"failed to delete BPF association",
 							slog.String(psLog.KeyDeviceName, ifaceName),
-							slog.String(psLog.KeyBPF, captureCfg.BPF),
+							slog.String(psLog.KeyBPF, captureCfg.Bpf),
 							slog.Uint64(psLog.KeyBPFHash, filterHash),
 							psLog.KeyError,
 							deleteErr.Error(),
@@ -355,8 +323,8 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 
 	if len(bpfConfig.Update) > 0 {
 		for ifaceName, bpfAssociationsToUpdate := range bpfConfig.Update {
-			for filterHash, captureCfg := range bpfAssociationsToUpdate {
-				updateErr := m.StopOne(ifaceName, filterHash, captureCfg.BPF)
+			for filterHash, captureCfg := range bpfAssociationsToUpdate.Captures {
+				updateErr := m.StopOne(ifaceName, filterHash, captureCfg.Bpf)
 				if updateErr != nil {
 					switch updateErr.(type) {
 					case *PacketCaptureNotFound:
@@ -370,7 +338,7 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 						logger.Error(
 							"failed to stop packet capture for BPF association before update, skipping update for this filter",
 							slog.String(psLog.KeyDeviceName, ifaceName),
-							slog.String(psLog.KeyBPF, captureCfg.BPF),
+							slog.String(psLog.KeyBPF, captureCfg.Bpf),
 							slog.Uint64(psLog.KeyBPFHash, filterHash),
 							psLog.KeyError,
 							updateErr.Error(),
@@ -384,7 +352,7 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 					m.ctx,
 					m.logger,
 					&CaptureConfig{
-						BPF:         captureCfg.BPF,
+						BPF:         captureCfg.Bpf,
 						DeviceName:  ifaceName,
 						Promiscuous: captureCfg.Promiscuous,
 						SnapLen:     captureCfg.SnapLen,
@@ -397,7 +365,7 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 					logger.Error(
 						"failed to update packet capture for BPF association",
 						slog.String(psLog.KeyDeviceName, ifaceName),
-						slog.String(psLog.KeyBPF, captureCfg.BPF),
+						slog.String(psLog.KeyBPF, captureCfg.Bpf),
 						slog.Uint64(psLog.KeyBPFHash, filterHash),
 						psLog.KeyError,
 						updateErr.Error(),
@@ -415,12 +383,12 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 
 	if len(bpfConfig.Create) > 0 {
 		for ifaceName, bpfAssociationsToCreate := range bpfConfig.Create {
-			for filterHash, captureCfg := range bpfAssociationsToCreate {
+			for filterHash, captureCfg := range bpfAssociationsToCreate.Captures {
 				createdPacketCapture, createErr := newPacketCapture(
 					m.ctx,
 					m.logger,
 					&CaptureConfig{
-						BPF:         captureCfg.BPF,
+						BPF:         captureCfg.Bpf,
 						DeviceName:  ifaceName,
 						Promiscuous: captureCfg.Promiscuous,
 						SnapLen:     captureCfg.SnapLen,
@@ -433,7 +401,7 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 					logger.Error(
 						"failed to create packet capture for BPF association",
 						slog.String(psLog.KeyDeviceName, ifaceName),
-						slog.String(psLog.KeyBPF, captureCfg.BPF),
+						slog.String(psLog.KeyBPF, captureCfg.Bpf),
 						slog.Uint64(psLog.KeyBPFHash, filterHash),
 						psLog.KeyError,
 						createErr.Error(),
@@ -468,59 +436,30 @@ func (m *pcapManager) enforceConfig(bpfConfig *BPFResponse) error {
 func (m *pcapManager) sendPacketEvent(pkt gopacket.Packet) error {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.sendPacketEvent")
 
-	err := pkt.ErrorLayer()
-	if err != nil {
+	if err := pkt.ErrorLayer(); err != nil {
 		logger.Error("failed to decode packet", psLog.KeyError, err)
 	}
 
-	m.clientMu.RLock()
-	client := m.client
-	m.clientMu.RUnlock()
+	packetEvent := ConvertPacketToEvent(pkt)
 
-	if client == nil {
-		// TODO: replace with a dropped packet log that gets sent, then wiped, on a 24-hour interval
-		logger.Warn("no HTTPS client available, dropping packet", psLog.KeyDroppedPacket, pkt.String())
+	m.streamMu.Lock()
+	defer m.streamMu.Unlock()
+
+	if m.packetStreamClient == nil {
+		logger.Warn("no stream available, dropping packet", psLog.KeyDroppedPacket, pkt.String())
 		return nil
 	}
 
-	// TODO: double-check whether this nesting of goroutines is okay
-	// the idea is to spin up a goroutine that we won't wait for. if packet is dropped, it'll just log to the dropped packet file
-	go func(pkt gopacket.Packet) {
-		// TODO: replace https request with NATS/Kafka or similar high throughput ingestion
-		logger.Info("marshaling request body")
-		// TODO: replace with more refined request shape
-		packetData := &PacketEvent{
-			Data: pkt.Dump(),
-		}
-		bodyJSON, err := json.Marshal(packetData)
-		if err != nil {
-			// TODO: replace with a dropped packet log that gets sent, then wiped, on a 24-hour interval
-			logger.Error("failed to marshal packet for upload", psLog.KeyError, err)
-			return
-		}
-
-		logger.Info("creating http request")
-		req, err := http.NewRequestWithContext(m.ctx, "POST", "https://localhost:9443/packets", bytes.NewBuffer(bodyJSON))
-		if err != nil {
-			// TODO: replace with a dropped packet log that gets sent, then wiped, on a 24-hour interval
-			logger.Error("failed to create packet upload http request", psLog.KeyError, err)
-			return
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		logger.Info("sending http request", psLog.KeyURI, "/packets")
-		resp, err := client.Do(req)
-		if err != nil {
-			logger.Error("failed to upload packet", psLog.KeyError, err)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			logger.Error("server returned non-200")
-			return
-		}
-	}(pkt)
+	err := m.packetStreamClient.Send(packetEvent)
+	if err != nil {
+		// TODO: switch on codes for retry-able versus non-retry-able errors
+		// create reconnection logic for non-retryable ones
+		// send on a reconnectCh to get a new stream client on demand,
+		// as opposed to the existing subscriber mechanism
+		// for receiving a new client connection when the client cert changes
+		logger.Error("failed to send packet over stream", psLog.KeyError, err)
+		return err
+	}
 
 	return nil
 }

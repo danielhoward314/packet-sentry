@@ -1,7 +1,6 @@
 package certs
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -12,18 +11,20 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
 	"github.com/danielhoward314/packet-sentry/internal/broadcast"
 	"github.com/danielhoward314/packet-sentry/internal/config"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	psOS "github.com/danielhoward314/packet-sentry/internal/os"
+	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
 )
 
 const (
@@ -43,30 +44,41 @@ type CertificateManager interface {
 }
 
 type certificateManager struct {
-	caCert                *x509.Certificate
-	cancelFunc            context.CancelFunc
-	certCheckInterval     time.Duration
-	clientCert            *x509.Certificate
-	clientPrivKey         *rsa.PrivateKey
-	ctx                   context.Context
-	logger                *slog.Logger
-	mTLSClientBroadcaster *broadcast.MTLSClientBroadcaster
-	systemInfo            psOS.SystemInfo
-	stopOnce              sync.Once
+	agentMTLSClientBroadcaster *broadcast.AgentMTLSClientBroadcaster
+	agentMTLSClientTarget      string
+	bootstrapClient            pbBootstrap.BootstrapServiceClient
+	caCert                     *x509.Certificate
+	cancelFunc                 context.CancelFunc
+	certCheckInterval          time.Duration
+	clientCert                 *x509.Certificate
+	clientPrivKey              *rsa.PrivateKey
+	ctx                        context.Context
+	logger                     *slog.Logger
+	stopOnce                   sync.Once
+	systemInfo                 psOS.SystemInfo
 }
 
 // NewCertificateManager returns an implementation of the CertificateManager interface
-func NewCertificateManager(ctx context.Context, baseLogger *slog.Logger, systemInfo psOS.SystemInfo, mtlsClientBroadCaster *broadcast.MTLSClientBroadcaster) CertificateManager {
+func NewCertificateManager(
+	ctx context.Context,
+	baseLogger *slog.Logger,
+	systemInfo psOS.SystemInfo,
+	boostrapClient pbBootstrap.BootstrapServiceClient,
+	agentMTLSClientBroadcaster *broadcast.AgentMTLSClientBroadcaster,
+	agentMTLSClientTarget string,
+) CertificateManager {
 	childCtx, cancelFunc := context.WithCancel(ctx)
 	childLogger := baseLogger.With(slog.String(psLog.KeyServiceName, logAttrValSvcName))
 
 	return &certificateManager{
-		cancelFunc:            cancelFunc,
-		certCheckInterval:     config.GetCertCheckInterval(),
-		ctx:                   childCtx,
-		logger:                childLogger,
-		mTLSClientBroadcaster: mtlsClientBroadCaster,
-		systemInfo:            systemInfo,
+		agentMTLSClientBroadcaster: agentMTLSClientBroadcaster,
+		agentMTLSClientTarget:      agentMTLSClientTarget,
+		bootstrapClient:            boostrapClient,
+		cancelFunc:                 cancelFunc,
+		certCheckInterval:          config.GetCertCheckInterval(),
+		ctx:                        childCtx,
+		logger:                     childLogger,
+		systemInfo:                 systemInfo,
 	}
 }
 
@@ -84,19 +96,6 @@ func (e *CertExpiringSoonError) Error() string {
 // Bootstrap represents the contents of the agentBootstrap.json file
 type Bootstrap struct {
 	InstallKey string `json:"installKey"`
-}
-
-// CertificateRequest represents the request body sent to the `/certificates` endpoint
-// issued for first-time and renewal client certificate requests
-type CertificateRequest struct {
-	CSR                     string `json:"csr"`
-	ExistingCertFingerprint string `json:"existingCertFingerprint,omitempty"`
-}
-
-// CertificateResponse represents the expected response body for `/certificates` requests
-type CertificateResponse struct {
-	ClientCertificate string `json:"clientCertificate"` // PEM-encoded certificate bytes
-	CACertificate     string `json:"caCertificate"`     // PEM-encoded certificate bytes
 }
 
 // Init is called during startup to create and publish an mTLS client.
@@ -124,12 +123,12 @@ func (cm *certificateManager) Init() error {
 		}
 	}
 
-	mTLSClient, err := cm.getMTLSClient()
+	mTLSClientConn, err := cm.createMTLSConnection(cm.agentMTLSClientTarget)
 	if err != nil {
-		logger.Error("failed to get mTLS client", psLog.KeyError, err)
+		logger.Error("failed to get mTLS client connection", psLog.KeyError, err)
 		return err
 	}
-	cm.mTLSClientBroadcaster.Publish(mTLSClient)
+	cm.agentMTLSClientBroadcaster.Publish(mTLSClientConn)
 
 	return nil
 }
@@ -165,12 +164,12 @@ func (cm *certificateManager) Start() {
 				continue
 			}
 
-			mTLSClient, err := cm.getMTLSClient()
+			mTLSClientConn, err := cm.createMTLSConnection(cm.agentMTLSClientTarget)
 			if err != nil {
-				logger.Error("failed to get mTLS client", psLog.KeyError, err)
+				logger.Error("failed to get mTLS client connection", psLog.KeyError, err)
 				continue
 			}
-			cm.mTLSClientBroadcaster.Publish(mTLSClient)
+			cm.agentMTLSClientBroadcaster.Publish(mTLSClientConn)
 		case <-cm.ctx.Done():
 			logger.Error("certificate manager context canceled")
 			return
@@ -355,45 +354,16 @@ func (cm *certificateManager) requestCert(isRenewal bool) error {
 
 	csrPEM := pem.EncodeToMemory(&pem.Block{Type: pemBlockTypeCertificateRequest, Bytes: csrDER})
 
-	reqBody := &CertificateRequest{
-		CSR: string(csrPEM),
-	}
-
-	method := http.MethodPost
-	// TODO: env-based handling of baseURL and, for local dev, either `InsecureSkipVerify: true` or putting server cert in tls config
-	// also, the port should be the tls (not mTLS) server port
-	url := "https://localhost:8443/certificates"
-	client := http.DefaultClient
-	// delete these lines when TODO above adds env-based config
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	client.Transport = &http.Transport{
-		TLSClientConfig: tlsCfg,
+	req := &pbBootstrap.CertificateRequest{
+		Csr:       string(csrPEM),
+		IsRenewal: isRenewal,
 	}
 
 	if isRenewal {
 		logger.Info("calculating fingerprint of existing cert for inclusion in cert renewal request")
 		fp := sha256.Sum256(cm.clientCert.Raw)
-		reqBody.ExistingCertFingerprint = fmt.Sprintf("%X", fp[:])
-		method = http.MethodPut
-	}
-
-	logger.Info("marshaling request body")
-	bodyJSON, err := json.Marshal(reqBody)
-	if err != nil {
-		return err
-	}
-
-	logger.Info("creating http request")
-	req, err := http.NewRequestWithContext(cm.ctx, method, url, bytes.NewBuffer(bodyJSON))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	if !isRenewal {
+		req.ExistingCertFingerprint = fmt.Sprintf("%X", fp[:])
+	} else {
 		logger.Info("reading bootstrap file for setting install key header for first cert request")
 		bootstrapPath := config.GetBootstrapFilePath()
 		content, err := os.ReadFile(bootstrapPath)
@@ -409,38 +379,19 @@ func (cm *certificateManager) requestCert(isRenewal bool) error {
 		if installKey == "" {
 			return fmt.Errorf("install key needed to request first client certificate")
 		}
-		logger.Info("setting x-install-key header")
-		req.Header.Set("x-install-key", installKey)
+		logger.Info("setting x-install-key in request")
+		req.InstallKey = installKey
 	}
 
-	logger.Info("making http request")
-	resp, err := client.Do(req)
+	res, err := cm.bootstrapClient.RequestCertificate(cm.ctx, req)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned non-200: %s", resp.Status)
-	}
-
-	logger.Info("reading http response body")
-	resBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	logger.Info("unmarshaling http response body")
-	var certResponse CertificateResponse
-	err = json.Unmarshal(resBody, &certResponse)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to get response for certificate requests %w", err)
 	}
 
 	logger.Info("decoding PEM block of client cert in response")
-	newCertPEMBlock, _ := pem.Decode([]byte(certResponse.ClientCertificate))
+	newCertPEMBlock, _ := pem.Decode([]byte(res.ClientCertificate))
 	if newCertPEMBlock == nil {
-		return fmt.Errorf("failed to decode PEM block of certificate in http response")
+		return fmt.Errorf("failed to decode PEM block of certificate in response")
 	}
 
 	if newCertPEMBlock.Type != pemBlockTypeCertificate {
@@ -455,9 +406,9 @@ func (cm *certificateManager) requestCert(isRenewal bool) error {
 	cm.clientCert = newCert
 
 	logger.Info("decoding PEM block of CA cert in response")
-	newCACertPEMBlock, _ := pem.Decode([]byte(certResponse.CACertificate))
+	newCACertPEMBlock, _ := pem.Decode([]byte(res.CaCertificate))
 	if newCACertPEMBlock == nil {
-		return fmt.Errorf("failed to decode PEM block of certificate in http response")
+		return fmt.Errorf("failed to decode PEM block of certificate in response")
 	}
 
 	if newCACertPEMBlock.Type != pemBlockTypeCertificate {
@@ -489,14 +440,14 @@ func (cm *certificateManager) requestCert(isRenewal bool) error {
 
 	logger.Info("writing client certificate to disk")
 	// the `clientCertificate` field of the cert response is already PEM bytes
-	err = os.WriteFile(clientCertFilePath, []byte(certResponse.ClientCertificate), 0o600)
+	err = os.WriteFile(clientCertFilePath, []byte(res.ClientCertificate), 0o600)
 	if err != nil {
 		return err
 	}
 
 	logger.Info("writing CA certificate to disk")
 	// the `caCertificate` field of the cert response is already PEM bytes
-	err = os.WriteFile(caCertFilePath, []byte(certResponse.CACertificate), 0o600)
+	err = os.WriteFile(caCertFilePath, []byte(res.CaCertificate), 0o600)
 	if err != nil {
 		return err
 	}
@@ -504,22 +455,11 @@ func (cm *certificateManager) requestCert(isRenewal bool) error {
 	return nil
 }
 
-type headerRoundTripper struct {
-	rt       http.RoundTripper
-	systemID string
-}
+func (cm *certificateManager) createMTLSConnection(addr string) (*grpc.ClientConn, error) {
+	logger := cm.logger.With(psLog.KeyFunction, "CertificateManager.createMTLSConnection")
 
-// RoundTrip implements the http.RoundTripper interface for headerRoundTripper
-func (h *headerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = req.Clone(req.Context()) // clone to avoid mutating caller's request
-	req.Header.Set("X-System-Id", h.systemID)
-	return h.rt.RoundTrip(req)
-}
+	logger.Info("creating mTLS gRPC connection")
 
-func (cm *certificateManager) getMTLSClient() (*http.Client, error) {
-	logger := cm.logger.With(psLog.KeyFunction, "CertificateManager.getMTLSClient")
-
-	logger.Info("instantiating mTLS client")
 	if cm.clientCert == nil {
 		clientCert, err := cm.getCertFromDisk(config.GetClientCertFilePath())
 		if err != nil {
@@ -552,37 +492,20 @@ func (cm *certificateManager) getMTLSClient() (*http.Client, error) {
 
 	tlsConfig := &tls.Config{
 		Certificates:       []tls.Certificate{tlsCert},
-		InsecureSkipVerify: false,
-		MinVersion:         tls.VersionTLS12,
 		RootCAs:            rootCAs,
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: false,
 	}
 
-	transport := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
-
-	mTLSClient := &http.Client{
-		Transport: &headerRoundTripper{
-			rt:       transport,
-			systemID: cm.clientCert.Subject.CommonName,
-		},
-	}
-
-	logger.Info("testing mTLS communication with server")
-	// TODO: env-based config of base URL
-	res, err := mTLSClient.Get("https://localhost:9443/mtls-test")
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+	)
 	if err != nil {
-		logger.Error("mTLS request failed", psLog.KeyError, err)
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		err = fmt.Errorf("mTLS response status is non-200: %d", res.StatusCode)
-		logger.Error("failed mTLS readiness check", psLog.KeyError, err)
+		logger.Error("failed to create grpc connection", psLog.KeyError, err)
 		return nil, err
 	}
 
-	logger.Info("mTLS client and server communication successful")
-	return mTLSClient, nil
+	logger.Info("successfully created gRPC mTLS connection")
+	return conn, nil
 }

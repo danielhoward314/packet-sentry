@@ -3,7 +3,7 @@
 ## Build the Go executable
 
 ```bash
-./scripts/build darwin <amd64|arm64>
+./scripts/build_agent darwin <amd64|arm64>
 ```
 
 ## Build macOS Installer

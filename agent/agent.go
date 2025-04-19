@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"sync"
 
 	"github.com/danielhoward314/packet-sentry/internal/certs"
@@ -13,11 +12,12 @@ import (
 )
 
 type Agent struct {
+	AgentAddr          string
 	BaseLogger         *slog.Logger
+	BootstrapAddr      string
 	CancelFunc         context.CancelFunc
 	CertificateManager certs.CertificateManager
 	Ctx                context.Context
-	MTLSClient         *http.Client
 	PollManager        poll.PollManager
 	PCapManager        psPCap.PCapManager
 	stopOnce           sync.Once
@@ -28,9 +28,13 @@ func NewAgent() *Agent {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	return &Agent{
-		BaseLogger: psLog.GetBaseLogger(),
-		CancelFunc: cancelFunc,
-		Ctx:        ctx,
+		// TODO: replace hard-coded addr with bootstrap-driven value
+		// maybe modify installer scripts to default to prod and expect local dev to overwrite it
+		AgentAddr:     "localhost:9444",
+		BaseLogger:    psLog.GetBaseLogger(),
+		BootstrapAddr: "localhost:9443",
+		CancelFunc:    cancelFunc,
+		Ctx:           ctx,
 	}
 }
 

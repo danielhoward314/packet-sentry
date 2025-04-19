@@ -12,6 +12,10 @@ windows-installer/*.wixpdb
 windows-installer/*.msi
 windows-installer/bin
 
+# Local development certs
+cmd/agent-api/*.pem
+cmd/agent-api/*.cnf
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

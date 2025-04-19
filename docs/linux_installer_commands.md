@@ -13,7 +13,7 @@ sudo dnf install libpcap-devel
 ```
 
 ```bash
-./scripts/build linux <amd64|arm64>
+./scripts/build_agent linux <amd64|arm64>
 ```
 
 ## Installer Pre-requisites

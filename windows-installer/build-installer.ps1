@@ -32,7 +32,7 @@ if (!(Test-Path -Path $binDir)) {
     New-Item -ItemType Directory -Path $binDir | Out-Null
 }
 
-# Copy the main Go executable. Pre-requisite: `.\scripts\build.ps1` has already run to build the Go executable.
+# Copy the main Go executable. Pre-requisite: `.\scripts\build_agent.ps1` has already run to build the Go executable.
 $packetSentryExe = Get-Item "$buildDir\packet_sentry_windows_$arch.exe" -ErrorAction SilentlyContinue
 if ($packetSentryExe) {
     Copy-Item $packetSentryExe.FullName "$binDir\packet_sentry.exe"
@@ -41,7 +41,7 @@ if ($packetSentryExe) {
     exit 1
 }
 
-# Copy the install actions CLI Go. Pre-requisite: `.\scripts\build.ps1` has already run to build the Go executable.
+# Copy the install actions CLI Go. Pre-requisite: `.\scripts\build_agent.ps1` has already run to build the Go executable.
 $install_actions = Get-Item "$buildDir\install_actions_windows_$arch.exe" -ErrorAction SilentlyContinue
 if ($install_actions) {
     Copy-Item $install_actions.FullName "$binDir\install_actions.exe"

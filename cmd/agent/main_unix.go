@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"

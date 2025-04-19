@@ -75,7 +75,7 @@ jobs:
             echo "installing libpcap dependency"
             sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux amd64"
-            ./scripts/build "linux" "amd64"
+            ./scripts/build_agent "linux" "amd64"
             echo "build Linux .deb installer for version 1.0.0 for amd64"
             go run ./linux-installer/main.go "1.0.0" "amd64" "deb"
             # TODO: linux installer validation
@@ -83,13 +83,13 @@ jobs:
             echo "installing libpcap dependency"
             sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux arm64"
-            ./scripts/build "linux" "arm64"
+            ./scripts/build_agent "linux" "arm64"
             echo "build Linux .deb installer for version 1.0.0 for arm64"
             go run ./linux-installer/main.go "1.0.0" "arm64" "deb"
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "building Go binaries for darwin ${{ matrix.architecture }}"
-            ./scripts/build darwin "${{ matrix.architecture }}"
+            ./scripts/build_agent darwin "${{ matrix.architecture }}"
             # TODO: use git to get version
             echo "building macOS pkg installer for version 1.0.0 for ${{ matrix.architecture }}"
             ./macos-installer/build-installer.sh "1.0.0" "${{ matrix.architecture }}"
@@ -97,7 +97,7 @@ jobs:
             ./macos-installer/validate-installer.sh "1.0.0" "${{ matrix.architecture }}"
           else
             echo "building Go binaries for windows ${{ matrix.architecture }}"
-            pwsh ./scripts/build.ps1 "${{ matrix.architecture }}"
+            pwsh ./scripts/build_agent.ps1 "${{ matrix.architecture }}"
             # TODO: use git to get version
             pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version 1.0.0 -ci $true
             # TODO: windows installer validation

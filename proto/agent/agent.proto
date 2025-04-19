@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/agent";
+
+service AgentService {
+  rpc ReportInterfaces(ReportInterfacesRequest) returns (Empty);
+
+  rpc SendPacketEvent(stream PacketEvent) returns (Empty);
+
+  rpc PollCommand(Empty) returns (Command);
+
+  rpc GetBPFConfig(Empty) returns (BPFConfig);
+}
+
+message Empty {}
+
+message InterfaceDetails {
+  string name = 1;
+}
+
+message ReportInterfacesRequest {
+  repeated InterfaceDetails interfaces = 1;
+  string pcapVersion = 2;
+}
+
+message Command {
+  string name = 1;
+}
+
+message CaptureConfig {
+  string bpf = 1;
+  string deviceName = 2;
+  bool promiscuous = 3;
+  int32 snapLen = 4;
+  int64 timeout = 5;
+}
+
+message BPFConfig {
+  map<string, InterfaceCaptureMap> create = 1;
+  map<string, InterfaceCaptureMap> update = 2;
+  map<string, InterfaceCaptureMap> delete = 3;
+}
+
+message InterfaceCaptureMap {
+  map<uint64, CaptureConfig> captures = 1;
+}
+
+
+message PacketEvent {
+  uint32 capture_length = 1;
+  uint32 original_length = 2;
+  int32 interface_index = 3;
+  bool truncated = 4;
+
+  Layers layers = 5;
+}
+
+message Layers {
+  IPLayer ip_layer = 1;
+  TCPLayer tcp_layer = 2;
+  UDPLayer udp_layer = 3;
+  TLSLayer tls_layer = 4;
+}
+
+message IPLayer {
+  string version = 1; // "IPv4" or "IPv6"
+  string src_ip = 2;
+  string dst_ip = 3;
+  uint32 ttl = 4;       // For IPv4
+  uint32 hop_limit = 5; // For IPv6
+  uint32 protocol = 6;  // L4 protocol number
+}
+
+message TCPLayer {
+  uint32 src_port = 1;
+  uint32 dst_port = 2;
+  uint32 seq = 3;
+  uint32 ack = 4;
+  bool fin = 5;
+  bool syn = 6;
+  bool rst = 7;
+  bool psh = 8;
+  bool ack_flag = 9;
+  bool urg = 10;
+  uint32 window = 11;
+}
+
+message UDPLayer {
+  uint32 src_port = 1;
+  uint32 dst_port = 2;
+  uint32 length = 3;
+}
+
+message TLSLayer {
+  repeated TLSRecord records = 1;
+}
+
+message TLSRecord {
+  string type = 1;
+  string version = 2;
+  uint32 length = 3;
+}

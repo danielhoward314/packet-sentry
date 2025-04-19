@@ -10,6 +10,8 @@ const (
 	KeyBPFHash = "bpfHash"
 	// KeyCaptureConfig is the key name constant "captureConfig" for use in the structured logger
 	KeyCaptureConfig = "captureConfig"
+	// KeyCertificateSigningRequest is the key name constant "certificateSigningRequest" for use in the structured logger
+	KeyCertificateSigningRequest = "certificateSigningRequest"
 	// KeyCommand is the key name constant "command" for use in the structured logger
 	KeyCommand = "command"
 	// KeyDeviceName is the key name constant "deviceName" for use in the structured logger

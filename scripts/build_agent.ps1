@@ -128,7 +128,7 @@ if (-not $GOARCH) {
     build_for_target $GOARCH
 } else {
     Write-Host "Invalid architecture: $GOARCH"
-    Write-Host "Usage: .\scripts\build.ps1 [-GOARCH <amd64|arm64>]"
+    Write-Host "Usage: .\scripts\build_agent.ps1 [-GOARCH <amd64|arm64>]"
     exit 1
 }
 

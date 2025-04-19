@@ -7,7 +7,7 @@ Pre-requisites:
 - git
 
 ```PowerShell
-.\scripts\build.ps1 -GOARCH <amd64|arm64>
+.\scripts\build_agent.ps1 -GOARCH <amd64|arm64>
 ```
 
 ## Pre-requisites for Building the MSI Installer

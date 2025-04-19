@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package bootstrap;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap";
+
+
+service BootstrapService {
+  rpc RequestCertificate(CertificateRequest) returns (CertificateResponse);
+}
+
+message CertificateRequest {
+  string csr = 1;
+  bool isRenewal = 2;
+  string installKey = 3;
+  string existingCertFingerprint = 4;
+}
+
+message CertificateResponse {
+  string clientCertificate = 1;
+  string caCertificate = 2;
+  string clientCertFingerprint = 3;
+}

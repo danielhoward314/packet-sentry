@@ -413,7 +413,7 @@ func main() {
 	goBuildBinary := fmt.Sprintf("./build/packet_sentry_linux_%s", arch)
 	fmt.Printf("Checking for existing go build binary %s\n", goBuildBinary)
 	if _, err := os.Stat(goBuildBinary); os.IsNotExist(err) {
-		log.Fatalf("Error: Binary %s not found. Run `./scripts/build linux %s` to build it.\n", goBuildBinary, arch)
+		log.Fatalf("Error: Binary %s not found. Run `./scripts/build_agent linux %s` to build it.\n", goBuildBinary, arch)
 	}
 
 	switch format {

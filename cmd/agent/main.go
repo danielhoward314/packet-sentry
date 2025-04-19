@@ -15,14 +15,23 @@ func initializeAgent(psAgent *agent.Agent) error {
 
 	logger.Info("instantiating agent dependencies")
 	systemInfo := psOS.NewSystemInfo(psAgent.Ctx, psAgent.BaseLogger)
-	mTLSClientBroadcaster := broadcast.NewMTLSClientBroadcaster()
+	logger.Info("creating bootstrap client connection for target", "target", psAgent.BootstrapAddr)
+	bootstrapClient, err := certs.NewBootstrapGRPCClient(psAgent.Ctx, psAgent.BootstrapAddr, true)
+	agentMTLSClientBroadcaster := broadcast.NewAgentMTLSClientBroadcaster()
 	commandsBroadcaster := broadcast.NewCommandsBroadcaster()
-	certManager := certs.NewCertificateManager(psAgent.Ctx, psAgent.BaseLogger, systemInfo, mTLSClientBroadcaster)
-	pcapManager := psPCap.NewPCapManager(psAgent.Ctx, psAgent.BaseLogger, commandsBroadcaster, mTLSClientBroadcaster)
-	pollManager := poll.NewPollManager(psAgent.Ctx, psAgent.BaseLogger, commandsBroadcaster, mTLSClientBroadcaster)
+	certManager := certs.NewCertificateManager(
+		psAgent.Ctx,
+		psAgent.BaseLogger,
+		systemInfo,
+		bootstrapClient,
+		agentMTLSClientBroadcaster,
+		psAgent.AgentAddr,
+	)
+	pcapManager := psPCap.NewPCapManager(psAgent.Ctx, psAgent.BaseLogger, commandsBroadcaster, agentMTLSClientBroadcaster)
+	pollManager := poll.NewPollManager(psAgent.Ctx, psAgent.BaseLogger, commandsBroadcaster, agentMTLSClientBroadcaster)
 
 	logger.Info("ensuring client certificate is in place for mTLS")
-	err := certManager.Init()
+	err = certManager.Init()
 	if err != nil {
 		logger.Error("failed client certificate readiness check", psLog.KeyError, err)
 		return err
