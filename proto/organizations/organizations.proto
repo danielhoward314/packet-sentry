@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package organizations;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/organizations";
+
+import "google/api/annotations.proto";
+
+service OrganizationsService {
+  rpc Get(GetOrganizationRequest) returns (GetOrganizationResponse) {
+    option (google.api.http) = {
+      get: "/v1/organizations/{id}"
+    };
+  }
+}
+
+message GetOrganizationRequest {
+  string id = 1;
+}
+
+message GetOrganizationResponse {
+  string id = 1;
+  string organization_name = 2;
+  string billing_plan = 3;
+}

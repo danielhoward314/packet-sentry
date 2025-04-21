@@ -32,6 +32,15 @@ func GetBootstrapFilePath() string {
 	return "/opt/packet-sentry/agentBootstrap.json"
 }
 
+// GetConfigFilePath returns the path of the config JSON file
+func GetConfigFilePath() string {
+	if runtime.GOOS == "windows" {
+		installDir := GetInstallDir()
+		return filepath.Join(installDir, "config.json")
+	}
+	return "/opt/packet-sentry/config.json"
+}
+
 // GetClientCertFilePath returns the path of the client certificate
 func GetClientCertFilePath() string {
 	if runtime.GOOS == "windows" {

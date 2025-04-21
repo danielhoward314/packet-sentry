@@ -1,0 +1,103 @@
+version: '3.8'
+services:
+  agent-api:
+    container_name: packet-sentry-agent-api
+    build:
+      context: .
+      target: agent-api
+      dockerfile: Dockerfile
+    env_file:
+      - env/agent-api
+    ports:
+      - "9443:9443"
+      - "9444:9444"
+    networks:
+      - backend
+    depends_on:
+      - postgres
+      - redis
+  cli:
+    container_name: packet-sentry-cli
+    build:
+      context: .
+      target: cli
+      dockerfile: Dockerfile
+    volumes:
+      - ./cmd/cli/commands/migrations:/migrations
+    networks:
+      - backend
+    env_file:
+      - env/postgres
+    depends_on:
+      - postgres
+  gateway:
+    container_name: packet-sentry-gateway
+    build:
+      context: .
+      target: gateway
+      dockerfile: Dockerfile
+    env_file:
+      - env/gateway
+    networks:
+      - backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - web-api
+  maildev:
+    container_name: maildev
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+    networks:
+      - backend
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - $HOME/docker/volumes/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_NAME=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - backend
+  redis:
+    container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+  web-console:
+    container_name: packet-sentry-web-console
+    build:
+      context: ./packet-sentry-spa
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    restart: always
+    networks:
+      backend:
+        aliases:
+          - web-console.packet-sentry.local
+  web-api:
+    container_name: packet-sentry-web-api
+    build:
+      context: .
+      target: web-api
+      dockerfile: Dockerfile
+    env_file:
+      - env/web-api
+    networks:
+      - backend
+    depends_on:
+      - maildev
+      - postgres
+      - redis
+
+networks:
+  backend:
+    driver: bridge

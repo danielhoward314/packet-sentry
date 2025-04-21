@@ -39,16 +39,16 @@ func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
 	testBPFResponses := []*pbAgent.BPFConfig{
 		{
 			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("tcp port 3000"): {
 						Bpf:         "tcp port 3000",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},
 					xxhash.Sum64String("udp port 53"): {
 						Bpf:         "udp port 53",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},
@@ -59,20 +59,20 @@ func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
 		},
 		{
 			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("icmp"): {
 						Bpf:         "icmp",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},
 				}),
 			},
 			Update: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("tcp port 3000"): {
 						Bpf:         "tcp port 3000",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 						Timeout:     int64(time.Second * 2),
@@ -80,10 +80,10 @@ func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
 				}),
 			},
 			Delete: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("upd port 53"): {
 						Bpf:         "upd port 53",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},
@@ -92,30 +92,30 @@ func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
 		},
 		{
 			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("udp port 5353"): {
 						Bpf:         "udp port 5353",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},
 				}),
 			},
 			Update: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("icmp"): {
 						Bpf:         "icmp",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     8192,
 					},
 				}),
 			},
 			Delete: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
+				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
 					xxhash.Sum64String("tcp port 3000"): {
 						Bpf:         "tcp port 3000",
-						DeviceName:  "lo",
+						DeviceName:  "lo0",
 						Promiscuous: false,
 						SnapLen:     65535,
 					},

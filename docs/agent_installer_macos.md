@@ -67,15 +67,13 @@ sudo lsof -p <pid>
 ## Clean up the macOS installation
 
 ```bash
+sudo launchctl unload /Library/LaunchDaemons/com.danielhoward314.packet-sentry-agent.plist
+sudo rm -rf /opt/packet-sentry/
+sudo rm /var/log/packet-sentry-*
+
+# clean up build artifacts
 rm macos-installer/package/agent.pkg macos-installer/package/packet-sentry-agent.pkg
 
 # if `pkgutil --expand packet-sentry-agent.pkg expanded` was done
 rm -rf ./macos-installer/package/expanded/ 
-
-sudo launchctl list com.danielhoward314.packet-sentry-agent
-# list command should have pid of daemon
-sudo kill -9 <pid>
-sudo launchctl unload /Library/LaunchDaemons/com.danielhoward314.packet-sentry-agent.plist
-
-sudo rm -rf /opt/packet-sentry/
 ```

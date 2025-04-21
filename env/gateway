@@ -1,0 +1,6 @@
+ACCESS_TOKEN_SECRET=Hd.ZjEQWqvrnQJsYNbT6RYzoEs6rQ.VAhn.cyF9xNuX@7E*4R_
+API_HOST=api
+API_PORT=50051
+CORS_ALLOW_LIST=http://web-console.packet-sentry.local
+REDIS_HOST=redis
+REDIS_PORT=6379

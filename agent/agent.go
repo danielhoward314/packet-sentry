@@ -2,10 +2,15 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/danielhoward314/packet-sentry/internal/certs"
+	"github.com/danielhoward314/packet-sentry/internal/config"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	psPCap "github.com/danielhoward314/packet-sentry/internal/pcap"
 	"github.com/danielhoward314/packet-sentry/internal/poll"
@@ -23,16 +28,43 @@ type Agent struct {
 	stopOnce           sync.Once
 }
 
+type configJSON struct {
+	AgentHost     string `json:"agentHost"`
+	AgentPort     string `json:"agentPort"`
+	BootstrapPort string `json:"bootstrapPort"`
+}
+
 // NewAgent creates a new agent instance with the minimum required dependencies.
 func NewAgent() *Agent {
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	baseLogger := psLog.GetBaseLogger()
+
+	// default to prod values, read from optional config.json file for local dev
+	agentAddr := "agent-api.packet-sentry:9444"
+	bootstrapAddr := "agent-api.packet-sentry:9443"
+
+	configFilePath := config.GetConfigFilePath()
+	content, err := os.ReadFile(configFilePath)
+	if err == nil {
+		baseLogger.Info("reading config file")
+		var cfg configJSON
+		err = json.Unmarshal(content, &cfg)
+		if err == nil {
+			agentHost := strings.TrimSpace(cfg.AgentHost)
+			agentPort := strings.TrimSpace(cfg.AgentPort)
+			bootstrapPort := strings.TrimSpace(cfg.BootstrapPort)
+			if agentHost != "" && agentPort != "" && bootstrapPort != "" {
+				baseLogger.Info("setting agent and bootstrap addresses from config file")
+				agentAddr = fmt.Sprintf("%s:%s", agentHost, agentPort)
+				bootstrapAddr = fmt.Sprintf("%s:%s", agentHost, bootstrapPort)
+			}
+		}
+	}
 
 	return &Agent{
-		// TODO: replace hard-coded addr with bootstrap-driven value
-		// maybe modify installer scripts to default to prod and expect local dev to overwrite it
-		AgentAddr:     "localhost:9444",
-		BaseLogger:    psLog.GetBaseLogger(),
-		BootstrapAddr: "localhost:9443",
+		AgentAddr:     agentAddr,
+		BaseLogger:    baseLogger,
+		BootstrapAddr: bootstrapAddr,
 		CancelFunc:    cancelFunc,
 		Ctx:           ctx,
 	}

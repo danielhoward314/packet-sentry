@@ -25,6 +25,13 @@ import (
 	svcBootstrap "github.com/danielhoward314/packet-sentry/services/bootstrap"
 )
 
+const (
+	serverCertPath = "certs/agent_server.cert.pem"
+	serverKeyPath  = "certs/agent_server.key.pem"
+	caCertPath     = "certs/ca.cert.pem"
+	caKeyPath      = "certs/ca.key.pem"
+)
+
 type certs struct {
 	serverCert tls.Certificate
 	caCert     *x509.Certificate
@@ -37,11 +44,22 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	agentAPIPort := os.Getenv("AGENT_API_PORT")
+	if agentAPIPort == "" {
+		log.Fatalf("failed to get AGENT_API_PORT from env var")
+	}
+	agentAPIMTLSPort := os.Getenv("AGENT_API_MTLS_PORT")
+	if agentAPIMTLSPort == "" {
+		log.Fatalf("failed to get AGENT_API_MTLS_PORT from env var")
+	}
+	apiAddr := ":" + agentAPIPort
+	apiMTLSAddr := ":" + agentAPIMTLSPort
+
 	certs, err := loadCerts(
-		"SERVER_CERT_PATH",
-		"SERVER_KEY_PATH",
-		"CA_CERT_PATH",
-		"CA_KEY_PATH",
+		serverCertPath,
+		serverKeyPath,
+		caCertPath,
+		caKeyPath,
 	)
 	if err != nil {
 		log.Fatalf("failed to load TLS creds")
@@ -69,11 +87,11 @@ func main() {
 
 	// Start TLS server
 	wg.Add(1)
-	go serveGRPC(ctx, &wg, tlsServer, ":9443", "TLS", logger)
+	go serveGRPC(ctx, &wg, tlsServer, apiAddr, "TLS", logger)
 
 	// Start mTLS server
 	wg.Add(1)
-	go serveGRPC(ctx, &wg, mtlsServer, ":9444", "mTLS", logger)
+	go serveGRPC(ctx, &wg, mtlsServer, apiMTLSAddr, "mTLS", logger)
 
 	// Wait for shutdown signal
 	sigs := make(chan os.Signal, 1)
@@ -129,12 +147,7 @@ func shutdownGRPC(server *grpc.Server, label string, logger *slog.Logger) {
 	}
 }
 
-func loadCerts(serverCertEnvVar, keyEnvVar, caCertEnvVar, caKeyEnvVar string) (*certs, error) {
-	serverCertPath := os.Getenv(serverCertEnvVar)
-	serverKeyPath := os.Getenv(keyEnvVar)
-	caCertPath := os.Getenv(caCertEnvVar)
-	caKeyPath := os.Getenv(caKeyEnvVar)
-
+func loadCerts(serverCertPath, serverKeyPath, caCertPath, caKeyPath string) (*certs, error) {
 	if serverCertPath == "" {
 		return nil, fmt.Errorf("failed to load server cert path from env var")
 	}
@@ -158,27 +171,27 @@ func loadCerts(serverCertEnvVar, keyEnvVar, caCertEnvVar, caKeyEnvVar string) (*
 	}
 	block, _ := pem.Decode(caCertPEMBytes)
 	if block == nil {
-		return nil, fmt.Errorf("Failed to decode CA cert PEM")
+		return nil, fmt.Errorf("failed to decode CA cert PEM")
 	}
 	caCert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse CA cert: %v", err)
+		return nil, fmt.Errorf("failed to parse CA cert: %v", err)
 	}
 	caKeyPEM, err := os.ReadFile(caKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read CA key: %v", err)
+		return nil, fmt.Errorf("failed to read CA key: %v", err)
 	}
 	block, _ = pem.Decode(caKeyPEM)
 	if block == nil {
-		return nil, fmt.Errorf("Failed to decode CA key PEM")
+		return nil, fmt.Errorf("failed to decode CA key PEM")
 	}
 	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse PKCS#8 private key: %v", err)
+		return nil, fmt.Errorf("failed to parse PKCS#8 private key: %v", err)
 	}
 	caKey, ok := parsedKey.(*rsa.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("Parsed key is not an RSA private key")
+		return nil, fmt.Errorf("parsed key is not an RSA private key")
 	}
 	return &certs{
 		serverCert: serverCert,

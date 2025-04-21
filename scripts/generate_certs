@@ -2,8 +2,10 @@
 
 set -euo pipefail
 
-# Collocating certs with the agent server main for local development
-pushd cmd/agent-api
+rm -rf certs/
+mkdir certs
+
+pushd certs
 
 echo "Generating CA key and certificate..."
 
@@ -15,26 +17,28 @@ openssl req -x509 -new -nodes -key ca.key.pem -sha256 -days 3650 \
   -subj "/CN=Packet Sentry CA" \
   -out ca.cert.pem
 
-echo "Generating server key and certificate..."
+echo "Generating agent server key and certificate..."
 
-# Generate server private key
-openssl genrsa -out server.key.pem 2048
+# Generate agent server private key
+openssl genrsa -out agent_server.key.pem 2048
 
-# Generate server certificate signing request
-openssl req -new -key server.key.pem -subj "/CN=localhost" -out server.csr.pem
+# Generate agent server certificate signing request (dev hostname)
+openssl req -new -key agent_server.key.pem -subj "/CN=agent-api.packet-sentry.local" -out agent_server.csr.pem
 
-# Create a SAN config for the server certificate
-cat > server_ext.cnf <<EOF
-subjectAltName = DNS:localhost
+# Create a SAN config for the agent server certificate (dev hostname)
+cat > agent_server_ext.cnf <<EOF
+subjectAltName = DNS:agent-api.packet-sentry.local
 EOF
 
 # Self-sign the server certificate using the CA and add SAN
-openssl x509 -req -in server.csr.pem -CA ca.cert.pem -CAkey ca.key.pem \
-  -CAcreateserial -out server.cert.pem -days 365 -sha256 \
-  -extfile server_ext.cnf
+openssl x509 -req -in agent_server.csr.pem -CA ca.cert.pem -CAkey ca.key.pem \
+  -CAcreateserial -out agent_server.cert.pem -days 365 -sha256 \
+  -extfile agent_server_ext.cnf
+
+# TODO: add other server certs for other services
 
 echo "All certificates and keys generated:"
-echo "- CA cert/key:           ca.cert.pem / ca.key.pem"
-echo "- Server cert/key:       server.cert.pem / server.key.pem"
+echo "- CA cert/key:                  ca.cert.pem / ca.key.pem"
+echo "- Agent Server cert/key:        agent_server.cert.pem / agent_server.key.pem"
 
 popd

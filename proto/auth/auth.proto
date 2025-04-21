@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/auth";
+
+import "google/api/annotations.proto";
+import "google/api/http.proto";
+
+service AuthService {
+  rpc ValidateSession (ValidateSessionRequest) returns (ValidateSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/session"
+      body: "*"
+    };
+  }
+  rpc Login (LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/login"
+      body: "*"
+    };
+  }
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/refresh"
+      body: "*"
+    };
+  }
+}
+
+message ValidateSessionRequest {
+  string jwt = 1;
+}
+
+message ValidateSessionResponse {
+  string jwt = 1;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string administrator_id = 1;
+  string organization_id = 2;
+  string administrator_name = 3;
+  string organization_name = 4;
+  string billing_plan = 5;
+  string admin_ui_access_token = 6;
+  string admin_ui_refresh_token = 7;
+  string api_access_token = 8;
+  string api_refresh_token = 9;
+}
+
+enum ClaimsType {
+    CLAIMS_TYPE_UNSPECIFIED = 0;
+    ADMIN_UI_SESSION = 1;
+    API_AUTHORIZATION = 2;
+}
+
+message RefreshTokenRequest {
+  string jwt = 1;
+  ClaimsType claims_type = 2;
+}
+
+message RefreshTokenResponse {
+  string jwt = 1;
+}
