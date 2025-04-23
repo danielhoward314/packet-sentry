@@ -8,7 +8,7 @@ import (
 
 	"github.com/danielhoward314/packet-sentry/dao"
 	"github.com/danielhoward314/packet-sentry/dao/postgres/queries"
-	"github.com/danielhoward314/packet-sentry/passwords"
+	"github.com/danielhoward314/packet-sentry/hashes"
 )
 
 type administrators struct {
@@ -30,8 +30,8 @@ const (
 type PasswordHashType string
 
 const (
-	// BCryptHashType is a string for the bcrypt password_hash_type ENUM
-	BCryptHashType = "BCRYPT"
+	// PasswordHashTypeBCrypt is a string for the bcrypt password_hash_type ENUM
+	PasswordHashTypeBCrypt = "BCRYPT"
 )
 
 // NewAdministrators returns an instance implementing the Administrators interface
@@ -40,6 +40,9 @@ func NewAdministrators(db *sql.DB) dao.Administrators {
 }
 
 func (o *administrators) Create(administrator *dao.Administrator, primaryAdministratorCleartextPassword string) (string, error) {
+	if administrator == nil {
+		return "", errors.New("invalid administrator")
+	}
 	if administrator.Email == "" {
 		return "", errors.New("invalid administrator email")
 	}
@@ -52,7 +55,7 @@ func (o *administrators) Create(administrator *dao.Administrator, primaryAdminis
 	if primaryAdministratorCleartextPassword == "" {
 		return "", errors.New("invalid administrator password cleartext")
 	}
-	passwordHash, err := passwords.HashPasswordWithBCrypt(primaryAdministratorCleartextPassword)
+	passwordHash, err := hashes.HashCleartextWithBCrypt(primaryAdministratorCleartextPassword)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +65,7 @@ func (o *administrators) Create(administrator *dao.Administrator, primaryAdminis
 		administrator.Email,
 		administrator.DisplayName,
 		administrator.OrganizationID,
-		BCryptHashType,
+		PasswordHashTypeBCrypt,
 		passwordHash,
 		administrator.AuthorizationRole,
 	).Scan(&id)
@@ -109,6 +112,9 @@ func (o *administrators) ReadByEmail(email string) (*dao.Administrator, error) {
 }
 
 func (o *administrators) Update(administrator *dao.Administrator) error {
+	if administrator == nil {
+		return errors.New("invalid administrator")
+	}
 	_, err := o.db.Exec(
 		queries.AdministratorsUpdate,
 		administrator.Email,

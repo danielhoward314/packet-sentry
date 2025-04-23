@@ -26,6 +26,12 @@ service AuthService {
       body: "*"
     };
   }
+  rpc CreateInstallKey (CreateInstallKeyRequest) returns (CreateInstallKeyResponse) {
+    option (google.api.http) = {
+      post: "/v1/install-keys"
+      body: "*"
+    };
+  }
 }
 
 message ValidateSessionRequest {
@@ -54,7 +60,7 @@ message LoginResponse {
 }
 
 enum ClaimsType {
-    CLAIMS_TYPE_UNSPECIFIED = 0;
+    UNSPECIFIED = 0;
     ADMIN_UI_SESSION = 1;
     API_AUTHORIZATION = 2;
 }
@@ -66,4 +72,12 @@ message RefreshTokenRequest {
 
 message RefreshTokenResponse {
   string jwt = 1;
+}
+
+message CreateInstallKeyRequest {
+  string administrator_email = 1;
+}
+
+message CreateInstallKeyResponse {
+  string install_key = 1;
 }

@@ -17,6 +17,7 @@ const (
 	UnspecifiedClaim ClaimsType = iota
 	AdminUISession
 	APIAuthorization
+	InstallKey
 )
 
 // TokenType is an enum representing different token types
@@ -26,6 +27,7 @@ const (
 	UnspecifiedToken TokenType = iota
 	Access
 	Refresh
+	InstallKeySingleUse
 )
 
 const (
@@ -46,17 +48,24 @@ const (
 	adminUIRefreshTokenExpiry          = 7 * 24 * time.Hour
 	apiAuthorizationAccessTokenExpiry  = 15 * time.Minute
 	apiAuthorizationRefreshTokenExpiry = 7 * 24 * time.Hour
+	installKeyTokenExpiry              = 1 * time.Hour
 )
 
 type AdminUISessionClaims struct {
-	OrganizationID    string `json:"organization_id"`
 	AuthorizationRole string `json:"authorization_role"`
+	OrganizationID    string `json:"organization_id"`
 	jwt.RegisteredClaims
 }
 
 type APIAuthorizationClaims struct {
-	OrganizationID    string `json:"organization_id"`
 	AuthorizationRole string `json:"authorization_role"`
+	OrganizationID    string `json:"organization_id"`
+	jwt.RegisteredClaims
+}
+
+type InstallKeyClaims struct {
+	AuthorizationRole string `json:"authorization_role"`
+	OrganizationID    string `json:"organization_id"`
 	jwt.RegisteredClaims
 }
 
@@ -123,6 +132,32 @@ func GenerateJWT(secret string, tokenType TokenType, claimsType ClaimsType, clai
 		claims := &APIAuthorizationClaims{
 			OrganizationID:    organizationID.(string),
 			AuthorizationRole: authorizationRole.(string),
+			RegisteredClaims:  registeredClaims,
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		tokenString, err := token.SignedString([]byte(secret))
+		if err != nil {
+			return "", err
+		}
+		return tokenString, nil
+	case InstallKey:
+		if tokenType != InstallKeySingleUse {
+			return "", errors.New("invalid token type for install key")
+		}
+		registeredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(installKeyTokenExpiry))
+		administratorID, ok := claimsData[AdministratorIDKey]
+		if !ok {
+			return "", errors.New("missing administrator_id claims")
+		}
+		organizationID, ok := claimsData[OrganizationIDKey]
+		if !ok {
+			return "", errors.New("missing organization_id claims")
+		}
+		registeredClaims.Subject = administratorID.(string)
+		registeredClaims.Audience = []string{webConsoleAudienceClaimValue}
+		claims := &InstallKeyClaims{
+			AuthorizationRole: claimsData[AuthorizationRoleKey].(string),
+			OrganizationID:    organizationID.(string),
 			RegisteredClaims:  registeredClaims,
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

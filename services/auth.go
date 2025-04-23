@@ -11,8 +11,8 @@ import (
 	"gopkg.in/gomail.v2"
 
 	"github.com/danielhoward314/packet-sentry/dao"
+	"github.com/danielhoward314/packet-sentry/hashes"
 	psJWT "github.com/danielhoward314/packet-sentry/jwt"
-	"github.com/danielhoward314/packet-sentry/passwords"
 	authpb "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 )
 
@@ -93,7 +93,7 @@ func (as *authService) Login(ctx context.Context, request *authpb.LoginRequest) 
 	if !administrator.Verified {
 		return nil, status.Errorf(codes.PermissionDenied, "email not verified")
 	}
-	err = passwords.ValidateBCryptHashedPassword(administrator.PasswordHash, request.Password)
+	err = hashes.ValidateBCryptHashedCleartext(administrator.PasswordHash, request.Password)
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "authentication error")
 	}
@@ -211,4 +211,29 @@ func (as *authService) RefreshToken(ctx context.Context, request *authpb.Refresh
 		return nil, status.Errorf(codes.Internal, "failed to create access JWT: %s", err.Error())
 	}
 	return &authpb.RefreshTokenResponse{Jwt: accessJWT}, nil
+}
+
+func (as *authService) CreateInstallKey(ctx context.Context, request *authpb.CreateInstallKeyRequest) (*authpb.CreateInstallKeyResponse, error) {
+	if request.AdministratorEmail == "" {
+		slog.Error("invalid administrator email")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid administrator email")
+	}
+
+	administrator, err := as.datastore.Administrators.ReadByEmail(request.AdministratorEmail)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "administrator not found: %s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to read administrator data: %s", err.Error())
+	}
+	if !administrator.Verified {
+		return nil, status.Errorf(codes.PermissionDenied, "administrator email not verified")
+	}
+	installKey, err := as.datastore.InstallKeys.Create(administrator)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create install key: %s", err.Error())
+	}
+	return &authpb.CreateInstallKeyResponse{
+		InstallKey: installKey,
+	}, nil
 }

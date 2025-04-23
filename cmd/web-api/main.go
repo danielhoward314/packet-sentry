@@ -101,7 +101,13 @@ func main() {
 		log.Fatal("error: REFRESH_TOKEN_SECRET is empty")
 	}
 
-	datastore := psPostgres.NewDatastore(db)
+	// secret for JWT install key generation
+	installKeySecret := os.Getenv("INSTALL_KEY_SECRET")
+	if refreshTokenSecret == "" {
+		log.Fatal("error: INSTALL_KEY_SECRET is empty")
+	}
+
+	datastore := psPostgres.NewDatastore(db, installKeySecret)
 	registrationDatastore := psRedis.NewRegistrationDatastore(redisClient)
 	tokenDatastore := psRedis.NewTokenDatastore(redisClient, accessTokenJWTSecret, refreshTokenSecret)
 

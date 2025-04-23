@@ -28,6 +28,9 @@ func NewOrganizations(db *sql.DB) dao.Organizations {
 }
 
 func (o *organizations) Create(organization *dao.Organization) (string, error) {
+	if organization == nil {
+		return "", errors.New("invalid organization")
+	}
 	if organization.PrimaryAdministratorEmail == "" {
 		return "", errors.New("invalid organization primary administrator email")
 	}

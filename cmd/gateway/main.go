@@ -104,7 +104,7 @@ func main() {
 	// the authorization middelware uses the authorization_role claim
 	// within the access token JWT
 	primaryAdminEndpoints := []string{
-		"/v1/organizations", // TODO: remove this route, only here to demonstrate the auth middleware works
+		"/v1/install-keys",
 	}
 
 	loggingMiddleware := middleware.NewLoggingMiddleware(logger)
@@ -117,7 +117,6 @@ func main() {
 		corsEnv = "http://localhost:5173"
 	}
 	corsAllowList := strings.Split(corsEnv, ",")
-	// Set up CORS middleware
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowList,                                       // Allow only these origins
 		AllowedMethods:   []string{"OPTIONS", "GET", "POST", "PUT", "DELETE"}, // Allow specific methods
@@ -134,7 +133,6 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	// start server in its own goroutine
 	go func() {
 		err := server.ListenAndServeTLS(serverCertPath, serverKeyPath)
 		if err != nil {
