@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,7 +23,19 @@ import (
 	orgspb "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 )
 
+const (
+	serverCertPath = "certs/gateway_server.cert.pem"
+	serverKeyPath  = "certs/gateway_server.key.pem"
+)
+
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
+	ctx := context.Background()
+
 	apiHost := os.Getenv("API_HOST")
 	if len(apiHost) == 0 {
 		apiHost = "localhost"
@@ -32,23 +45,30 @@ func main() {
 		apiPort = "50051"
 	}
 	apiAddr := apiHost + ":" + apiPort
+	// TODO: service mesh / envoy sidecar for mTLS between gateway and web-api
 	conn, err := grpc.NewClient(apiAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect to hello service: %v", err)
 	}
 	defer conn.Close()
-	// Register gRPC server endpoint
-	// Note: Make sure the gRPC server is running properly and accessible
+
+	logger.Info("setting up grpc-gateway serve mux")
 	mux := runtime.NewServeMux()
-	err = accountspb.RegisterAccountsServiceHandler(context.Background(), mux, conn)
+
+	logger.Info("registering accounts service on gateway mux")
+	err = accountspb.RegisterAccountsServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the accounts service handler: %v", err)
 	}
-	err = authpb.RegisterAuthServiceHandler(context.Background(), mux, conn)
+
+	logger.Info("registering auth service on gateway mux")
+	err = authpb.RegisterAuthServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the auth service handler: %v", err)
 	}
-	err = orgspb.RegisterOrganizationsServiceHandler(context.Background(), mux, conn)
+
+	logger.Info("registering organizations service on gateway mux")
+	err = orgspb.RegisterOrganizationsServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the organizations service handler: %v", err)
 	}
@@ -87,11 +107,10 @@ func main() {
 		"/v1/organizations", // TODO: remove this route, only here to demonstrate the auth middleware works
 	}
 
+	loggingMiddleware := middleware.NewLoggingMiddleware(logger)
 	authMiddleware := middleware.NewAuthMiddleware(redisClient, accessTokenJWTSecret, pathsWithoutAuthorization, primaryAdminEndpoints)
 
-	middlewareWrappedMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authMiddleware.ServeHTTP(w, r, mux)
-	})
+	middlewareWrappedMux := loggingMiddleware(authMiddleware(mux))
 
 	corsEnv := os.Getenv("CORS_ALLOW_LIST")
 	if len(corsEnv) == 0 {
@@ -100,7 +119,7 @@ func main() {
 	corsAllowList := strings.Split(corsEnv, ",")
 	// Set up CORS middleware
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   corsAllowList,                                       // Allow only this origin
+		AllowedOrigins:   corsAllowList,                                       // Allow only these origins
 		AllowedMethods:   []string{"OPTIONS", "GET", "POST", "PUT", "DELETE"}, // Allow specific methods
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},           // Allow specific headers
 		AllowCredentials: true,                                                // Allow credentials
@@ -117,22 +136,19 @@ func main() {
 
 	// start server in its own goroutine
 	go func() {
-		err := server.ListenAndServe()
+		err := server.ListenAndServeTLS(serverCertPath, serverKeyPath)
 		if err != nil {
 			log.Fatalf("gateway server failed to listen: %v", err)
 		}
 	}()
 
-	// trap sigterm or interupt and gracefully shutdown the server
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	// block until a signal is received
 	sig := <-sigs
-	log.Println("Got signal:", sig)
+	logger.Info("shutdown signal received", "signal", sig)
 
-	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancelFunc := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFunc()
 	server.Shutdown(ctx)
 }

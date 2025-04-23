@@ -4,6 +4,12 @@ The `gateway` service exposes a RESTful API that reverse proxies requests to the
 
 ## Pre-requisites
 
+The containers depend on their server certs:
+
+```bash
+./scripts/generate_certs
+```
+
 Build and run both required containers (the `compose.yml` will spin up the containers they depend on):
 
 ```bash
@@ -26,7 +32,7 @@ If you get an error about not being able to resolve the host, you need to modify
 Make a signup request with all required parameters:
 
 ```bash
-curl -X POST http://gateway.packet-sentry.local:8080/v1/signup \
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/signup \
     -H "Content-Type: application/json" \
     -d '{"organizationName": "testname", "primaryAdministratorEmail": "testadmin@testorg.com", "primaryAdministratorName": "testadminname", "primaryAdministratorCleartextPassword": "testpassword"}'
 ```
@@ -67,7 +73,7 @@ Make the same request with any missing parameters and it should fail.
 This endpoint requires the token and email code from the `/v1/signup` endpoint.
 
 ```bash
-curl -X POST http://gateway.packet-sentry.local:8080/v1/verify \
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/verify \
     -H "Content-Type: application/json" \
     -d '{"token": "<token>", "verificationCode": "<email-code>"}'
 ```
@@ -111,7 +117,7 @@ Use the [jwt debugger](https://jwt.io/) to see the decoded JWT. Note that for ac
 This endpoint validates the admin UI session JWTs. The web console makes use of this endpoint to handle session management. When a user's admin UI sesssion
 
 ```bash
-curl -X POST http://gateway.packet-sentry.local:8080/v1/session \
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/session \
     -H "Content-Type: application/json" \
     -d '{"jwt": "<ui-access-token>"}'
 ```
@@ -123,7 +129,7 @@ Assuming a valid JWT, this API should respond with the same JWT.
 This endpoint is used to request a new access token by providing a refresh token and the claims type. The claims type should correspond to the one in the refresh token, i.e. use claims type 1 for an admin UI refresh token and 2 for an API refresh token.
 
 ```bash
-curl -X POST http://gateway.packet-sentry.local:8080/v1/refresh \
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/refresh \
     -H "Content-Type: application/json" \
     -d '{"jwt": "<ui|api-refresh-token>", "claimsType": <1|2>}'
 ```
@@ -136,7 +142,7 @@ Happy path side-effects:
 ### /v1/login
 
 ```bash
-curl -X POST http://gateway.packet-sentry.local:8080/v1/login \
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/login \
     -H "Content-Type: application/json" \
     -d '{"email": "<email>", "password": "<password>"}'
 ```
@@ -146,7 +152,7 @@ This API should respond with the organization, administrator, and token data tha
 ### /v1/organizations
 
 ```bash
-curl -X GET http://gateway.packet-sentry.local:8080/v1/organizations/<organization-id> \
+curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/organizations/<organization-id> \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>"
 ```

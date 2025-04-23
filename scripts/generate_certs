@@ -8,37 +8,58 @@ mkdir certs
 pushd certs
 
 echo "Generating CA key and certificate..."
-
-# Generate CA private key
 openssl genrsa -out ca.key.pem 4096
-
-# Generate self-signed CA certificate
 openssl req -x509 -new -nodes -key ca.key.pem -sha256 -days 3650 \
   -subj "/CN=Packet Sentry Local Test CA" \
   -out ca.cert.pem
 
-echo "Generating agent server key and certificate..."
-
-# Generate agent server private key
+echo "Generating agent server key and certificate signing request..."
 openssl genrsa -out agent_server.key.pem 2048
-
-# Generate agent server certificate signing request (dev hostname)
 openssl req -new -key agent_server.key.pem -subj "/CN=agent-api.packet-sentry.local" -out agent_server.csr.pem
 
-# Create a SAN config for the agent server certificate (dev hostname)
+echo "Creating a SAN config for the agent server certificate (dev hostname)..."
 cat > agent_server_ext.cnf <<EOF
 subjectAltName = DNS:agent-api.packet-sentry.local
 EOF
 
-# Self-sign the server certificate using the CA and add SAN
+echo "Signing the agent server certificate using the CA and SAN config..."
 openssl x509 -req -in agent_server.csr.pem -CA ca.cert.pem -CAkey ca.key.pem \
   -CAcreateserial -out agent_server.cert.pem -days 365 -sha256 \
   -extfile agent_server_ext.cnf
 
-# TODO: add other server certs for other services
+echo "Generating gateway server key and certificate signing request..."
+openssl genrsa -out gateway_server.key.pem 2048
+openssl req -new -key gateway_server.key.pem -subj "/CN=gateway.packet-sentry.local" -out gateway_server.csr.pem
+
+echo "Creating a SAN config for the gateway server certificate (dev hostname)..."
+cat > gateway_server_ext.cnf <<EOF
+subjectAltName = DNS:gateway.packet-sentry.local
+EOF
+
+echo "Signing the gateway server certificate using the CA and SAN config..."
+openssl x509 -req -in gateway_server.csr.pem -CA ca.cert.pem -CAkey ca.key.pem \
+  -CAcreateserial -out gateway_server.cert.pem -days 365 -sha256 \
+  -extfile gateway_server_ext.cnf
+
+echo "Generating web-api server key and certificate signing request..."
+openssl genrsa -out web_api_server.key.pem 2048
+openssl req -new -key web_api_server.key.pem -subj "/CN=web-api.packet-sentry.local" -out web_api_server.csr.pem
+
+echo "Creating a SAN config for the web server certificate (dev hostname)..."
+cat > web_api_server_ext.cnf <<EOF
+subjectAltName = DNS:web-api.packet-sentry.local
+EOF
+
+echo "Signing the web-api server certificate using the CA and SAN config..."
+openssl x509 -req -in web_api_server.csr.pem -CA ca.cert.pem -CAkey ca.key.pem \
+  -CAcreateserial -out web_api_server.cert.pem -days 365 -sha256 \
+  -extfile web_api_server_ext.cnf
+
 
 echo "All certificates and keys generated:"
-echo "- CA cert/key:                  ca.cert.pem / ca.key.pem"
-echo "- Agent Server cert/key:        agent_server.cert.pem / agent_server.key.pem"
+echo "- CA cert/key:                    ca.cert.pem / ca.key.pem"
+echo "- Agent Server cert/key:          agent_server.cert.pem / agent_server.key.pem"
+echo "- Gateway Server cert/key:        gateway_server.cert.pem / gateway_server.key.pem"
+echo "- Web API Server cert/key:        web_api_server.cert.pem / web_api_server.key.pem"
 
 popd

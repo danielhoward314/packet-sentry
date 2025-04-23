@@ -2,11 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
 	"log"
 	"log/slog"
 	"net"
@@ -17,8 +12,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
+	"github.com/danielhoward314/packet-sentry/cmd"
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
 	"github.com/danielhoward314/packet-sentry/services"
@@ -30,12 +25,6 @@ const (
 	caCertPath     = "certs/ca.cert.pem"
 	caKeyPath      = "certs/ca.key.pem"
 )
-
-type certs struct {
-	serverCert tls.Certificate
-	caCert     *x509.Certificate
-	caKey      *rsa.PrivateKey
-}
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -54,18 +43,19 @@ func main() {
 	apiAddr := ":" + agentAPIPort
 	apiMTLSAddr := ":" + agentAPIMTLSPort
 
-	certs, err := loadCerts(
+	certs, err := cmd.LoadServerCerts(
 		serverCertPath,
 		serverKeyPath,
 		caCertPath,
 		caKeyPath,
+		true,
 	)
 	if err != nil {
 		log.Fatalf("failed to load TLS creds")
 	}
 
-	tlsCreds := loadTLSCreds(certs, false)
-	mtlsCreds := loadTLSCreds(certs, true)
+	tlsCreds := cmd.LoadServerTLSCreds(certs, false)
+	mtlsCreds := cmd.LoadServerTLSCreds(certs, true)
 
 	// Create gRPC servers
 	tlsServer := grpc.NewServer(grpc.Creds(tlsCreds))
@@ -73,8 +63,8 @@ func main() {
 
 	bootstrapService := services.NewBootstrapService(
 		logger,
-		certs.caCert,
-		certs.caKey,
+		certs.CACert,
+		certs.CAKey,
 	)
 	pbBootstrap.RegisterBootstrapServiceServer(tlsServer, bootstrapService)
 
@@ -144,73 +134,4 @@ func shutdownGRPC(server *grpc.Server, label string, logger *slog.Logger) {
 		logger.Warn("shutdown timed out, forcing stop", slog.String("label", label))
 		server.Stop()
 	}
-}
-
-func loadCerts(serverCertPath, serverKeyPath, caCertPath, caKeyPath string) (*certs, error) {
-	if serverCertPath == "" {
-		return nil, fmt.Errorf("failed to load server cert path from env var")
-	}
-	if serverKeyPath == "" {
-		return nil, fmt.Errorf("failed to load server key path from env var")
-	}
-	if caCertPath == "" {
-		return nil, fmt.Errorf("failed to load CA cert path from env var")
-	}
-	if caKeyPath == "" {
-		return nil, fmt.Errorf("failed to load CA key path from env var")
-	}
-
-	serverCert, err := tls.LoadX509KeyPair(serverCertPath, serverKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("error loading server cert key pair: %w", err)
-	}
-	caCertPEMBytes, err := os.ReadFile(caCertPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading CA cert: %w", err)
-	}
-	block, _ := pem.Decode(caCertPEMBytes)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode CA cert PEM")
-	}
-	caCert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse CA cert: %v", err)
-	}
-	caKeyPEM, err := os.ReadFile(caKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA key: %v", err)
-	}
-	block, _ = pem.Decode(caKeyPEM)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode CA key PEM")
-	}
-	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse PKCS#8 private key: %v", err)
-	}
-	caKey, ok := parsedKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("parsed key is not an RSA private key")
-	}
-	return &certs{
-		serverCert: serverCert,
-		caCert:     caCert,
-		caKey:      caKey,
-	}, nil
-}
-
-func loadTLSCreds(certs *certs, isMTLS bool) credentials.TransportCredentials {
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{certs.serverCert},
-		MinVersion:   tls.VersionTLS12,
-	}
-
-	if isMTLS {
-		certPool := x509.NewCertPool()
-		certPool.AddCert(certs.caCert)
-		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-		tlsConfig.ClientCAs = certPool
-	}
-
-	return credentials.NewTLS(tlsConfig)
 }

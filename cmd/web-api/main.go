@@ -1,16 +1,23 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/gomail.v2"
 
 	psPostgres "github.com/danielhoward314/packet-sentry/dao/postgres"
@@ -22,14 +29,13 @@ import (
 )
 
 func main() {
-	// gRPC server
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
 
-	// postgres sql.DB instance
+	server := grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
+
 	host := os.Getenv("POSTGRES_HOST")
 	port := os.Getenv("POSTGRES_PORT")
 	password := os.Getenv("POSTGRES_PASSWORD")
@@ -45,13 +51,14 @@ func main() {
 		applicationDB,
 		sslMode,
 	)
+	logger.Info("connecting to postgres")
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Error connecting to the database:", err)
+		log.Fatal("Error connecting to the postgres:", err)
 	}
 	defer db.Close()
 
-	// redis client
+	logger.Info("connecting to redis")
 	redisHost := os.Getenv("REDIS_HOST")
 	if redisHost == "" {
 		log.Fatal("error: REDIS_HOST is empty")
@@ -66,7 +73,7 @@ func main() {
 		DB:   0, // use default DB
 	})
 
-	// SMTP dialer instance
+	logger.Info("connecting to SMTP server")
 	smtpHost := os.Getenv("SMTP_HOST")
 	if smtpHost == "" {
 		log.Fatal("error: SMTP_HOST is empty")
@@ -98,7 +105,8 @@ func main() {
 	registrationDatastore := psRedis.NewRegistrationDatastore(redisClient)
 	tokenDatastore := psRedis.NewTokenDatastore(redisClient, accessTokenJWTSecret, refreshTokenSecret)
 
-	// dependency injection for each gRPC service
+	logger.Info("injecting dependencies into service layer")
+	// TODO: inject context into all of the services
 	accountSvc := services.NewAccountsService(
 		datastore,
 		registrationDatastore,
@@ -116,14 +124,68 @@ func main() {
 		datastore,
 	)
 
-	// register service layer implementations for gRPC service interfaces
-	accountspb.RegisterAccountsServiceServer(s, accountSvc)
-	authpb.RegisterAuthServiceServer(s, authSvc)
-	orgspb.RegisterOrganizationsServiceServer(s, organizationsSvc)
+	accountspb.RegisterAccountsServiceServer(server, accountSvc)
+	authpb.RegisterAuthServiceServer(server, authSvc)
+	orgspb.RegisterOrganizationsServiceServer(server, organizationsSvc)
 
-	// start gRPC server
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wg.Add(1)
+	apiPort := os.Getenv("API_PORT")
+	if len(apiPort) == 0 {
+		apiPort = "50051"
+	}
+	apiAddr := "[::]" + ":" + apiPort
+	go serveGRPC(ctx, &wg, server, apiAddr, "web-api", logger)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+	logger.Info("shutdown signal received")
+	cancel()
+
+	// Shutdown servers gracefully
+	go shutdownGRPC(server, "web-api", logger)
+
+	wg.Wait()
+	logger.Info("all servers shut down cleanly")
+}
+
+func serveGRPC(ctx context.Context, wg *sync.WaitGroup, server *grpc.Server, addr string, label string, logger *slog.Logger) {
+	defer wg.Done()
+
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		logger.Error("failed to bind", slog.String("label", label), slog.String("address", addr), slog.Any("error", err))
+		return
+	}
+	logger.Info("starting server", slog.String("label", label), slog.String("address", addr))
+
+	go func() {
+		<-ctx.Done()
+		_ = lis.Close() // triggers server.Serve to return
+	}()
+
+	if err := server.Serve(lis); err != nil && ctx.Err() == nil {
+		logger.Error("server exited with error", slog.String("label", label), slog.Any("error", err))
+	}
+}
+
+func shutdownGRPC(server *grpc.Server, label string, logger *slog.Logger) {
+	logger.Info("initiating graceful shutdown", slog.String("label", label))
+
+	done := make(chan struct{})
+	go func() {
+		server.GracefulStop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("server shutdown completed", slog.String("label", label))
+	case <-time.After(10 * time.Second):
+		logger.Warn("shutdown timed out, forcing stop", slog.String("label", label))
+		server.Stop()
 	}
 }
