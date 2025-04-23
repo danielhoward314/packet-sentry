@@ -21,8 +21,7 @@ import (
 
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
-	svcAgent "github.com/danielhoward314/packet-sentry/services/agent"
-	svcBootstrap "github.com/danielhoward314/packet-sentry/services/bootstrap"
+	"github.com/danielhoward314/packet-sentry/services"
 )
 
 const (
@@ -72,14 +71,14 @@ func main() {
 	tlsServer := grpc.NewServer(grpc.Creds(tlsCreds))
 	mtlsServer := grpc.NewServer(grpc.Creds(mtlsCreds))
 
-	bootstrapService := svcBootstrap.NewBootstrapService(
+	bootstrapService := services.NewBootstrapService(
 		logger,
 		certs.caCert,
 		certs.caKey,
 	)
 	pbBootstrap.RegisterBootstrapServiceServer(tlsServer, bootstrapService)
 
-	agentService := svcAgent.NewAgentService(logger)
+	agentService := services.NewAgentService(logger)
 	pbAgent.RegisterAgentServiceServer(mtlsServer, agentService)
 
 	ctx, cancel := context.WithCancel(context.Background())

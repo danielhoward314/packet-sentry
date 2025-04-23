@@ -71,18 +71,6 @@ services:
       - "6379:6379"
     networks:
       - backend
-  web-console:
-    container_name: packet-sentry-web-console
-    build:
-      context: ./packet-sentry-spa
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    restart: always
-    networks:
-      backend:
-        aliases:
-          - web-console.packet-sentry.local
   web-api:
     container_name: packet-sentry-web-api
     build:
@@ -97,6 +85,18 @@ services:
       - maildev
       - postgres
       - redis
+  web-console:
+    container_name: packet-sentry-web-console
+    build:
+      context: ./packet-sentry-spa
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    restart: always
+    networks:
+      backend:
+        aliases:
+          - web-console.packet-sentry.local
 
 networks:
   backend:

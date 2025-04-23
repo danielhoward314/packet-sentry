@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package account;
+package accounts;
 
-option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/account";
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/accounts";
 
 import "google/api/annotations.proto";
 import "google/api/http.proto";
 
-service AccountService {
+service AccountsService {
   rpc Signup (SignupRequest) returns (SignupResponse) {
     option (google.api.http) = {
       post: "/v1/signup"

@@ -1,0 +1,230 @@
+package services
+
+import (
+	"bytes"
+	"context"
+	"database/sql"
+	"html/template"
+	"log/slog"
+
+	"github.com/go-redis/redis/v8"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gopkg.in/gomail.v2"
+
+	"github.com/danielhoward314/packet-sentry/dao"
+	"github.com/danielhoward314/packet-sentry/dao/postgres"
+	psJWT "github.com/danielhoward314/packet-sentry/jwt"
+	accountpb "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+)
+
+const (
+	emailFrom = "no.reply@packet-sentry.com"
+)
+
+// accountsService implements the account gRPC service
+type accountsService struct {
+	accountpb.UnimplementedAccountsServiceServer
+	datastore             *dao.Datastore
+	registrationDatastore dao.RegistrationDatastore
+	tokenDatastore        dao.TokenDatastore
+	smtpDialer            *gomail.Dialer
+}
+
+func NewAccountsService(
+	datastore *dao.Datastore,
+	registrationDatastore dao.RegistrationDatastore,
+	tokenDatastore dao.TokenDatastore,
+	smtpDialer *gomail.Dialer,
+) accountpb.AccountsServiceServer {
+	return &accountsService{
+		datastore:             datastore,
+		registrationDatastore: registrationDatastore,
+		tokenDatastore:        tokenDatastore,
+		smtpDialer:            smtpDialer,
+	}
+}
+
+// Signup creates a new organization and admin, and triggers primary admin email verification
+func (as *accountsService) Signup(ctx context.Context, request *accountpb.SignupRequest) (*accountpb.SignupResponse, error) {
+	if request.OrganizationName == "" {
+		slog.Error("invalid organization name")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid organization name")
+	}
+	if request.PrimaryAdministratorEmail == "" {
+		slog.Error("invalid primary administrator email")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator email")
+	}
+	if request.PrimaryAdministratorName == "" {
+		slog.Error("invalid primary administrator name")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator name")
+	}
+	if request.PrimaryAdministratorCleartextPassword == "" {
+		slog.Error("invalid primary administrator cleartext password")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator cleartext password")
+	}
+	organization := &dao.Organization{
+		Name:                      request.OrganizationName,
+		PrimaryAdministratorEmail: request.PrimaryAdministratorEmail,
+	}
+	slog.Info("creating organization")
+	organizationID, err := as.datastore.Organizations.Create(organization)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create organization")
+	}
+	administrator := &dao.Administrator{
+		Email:             request.PrimaryAdministratorEmail,
+		DisplayName:       request.PrimaryAdministratorName,
+		OrganizationID:    organizationID,
+		AuthorizationRole: postgres.PrimaryAdmin,
+	}
+	slog.Info("creating primary administrator", "organization_id", organizationID)
+	administratorID, err := as.datastore.Administrators.Create(administrator, request.PrimaryAdministratorCleartextPassword)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create administrator")
+	}
+	slog.Info("creating registration data", "organization_id", organizationID, "administrator_id", administratorID)
+	token, emailCode, err := as.registrationDatastore.Create(&dao.Registration{
+		OrganizationID:  organizationID,
+		AdministratorID: administratorID,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create registration")
+	}
+	emailTemplateData := struct {
+		Code string
+	}{
+		Code: emailCode,
+	}
+	slog.Info("parsing verification email template")
+	tmpl, err := template.ParseFiles("templates/verify_email.html")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to parse registration email template %s", err.Error())
+	}
+	var body bytes.Buffer
+	slog.Info("executing verification email template")
+	err = tmpl.Execute(&body, emailTemplateData)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to executing registration email template %s", err.Error())
+	}
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", emailFrom)
+	m.SetHeader("To", request.PrimaryAdministratorEmail)
+	m.SetHeader("Subject", "Packet Sentry: Verify your email")
+	m.SetBody("text/html", body.String())
+	slog.Info("sending verification email")
+	err = as.smtpDialer.DialAndSend(m)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to send administrator email verification email %s", err.Error())
+	}
+	return &accountpb.SignupResponse{
+		Token: token,
+	}, nil
+}
+
+// Verify validates email verification codes, updates the administrators.verified column & creates admin UI & API JWTs
+func (as *accountsService) Verify(ctx context.Context, request *accountpb.VerificationRequest) (*accountpb.VerificationResponse, error) {
+	if request.Token == "" {
+		slog.Error("invalid token")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid token")
+	}
+	if request.VerificationCode == "" {
+		slog.Error("invalid verification code")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid verification code")
+	}
+	registration, err := as.registrationDatastore.Read(request.Token)
+	if err != nil {
+		if err == redis.Nil {
+			return nil, status.Errorf(codes.NotFound, "registration token not found: %s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to read registration token: %s", err.Error())
+	}
+	if registration.EmailCode != request.VerificationCode {
+		return nil, status.Errorf(codes.PermissionDenied, "verification code not authorized")
+	}
+	administrator, err := as.datastore.Administrators.Read(registration.AdministratorID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "administrator not found: %s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to read administrator data: %s", err.Error())
+	}
+	administrator.Verified = true
+	err = as.datastore.Administrators.Update(administrator)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update administrator data: %s", err.Error())
+	}
+	err = as.registrationDatastore.Delete(request.Token)
+	if err != nil {
+		// non-fatal error, the registration data has a short TTL
+		slog.Warn("failed to delete registration data")
+	}
+	adminUIAccessToken, err := as.tokenDatastore.Create(
+		&dao.TokenData{
+			OrganizationID:    administrator.OrganizationID,
+			AdministratorID:   administrator.ID,
+			AuthorizationRole: administrator.AuthorizationRole,
+			TokenType:         psJWT.Access,
+			ClaimsType:        psJWT.AdminUISession,
+		},
+		psJWT.Access,
+		psJWT.AdminUISession,
+	)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate jwt: %s", err.Error())
+	}
+	adminUIRefreshToken, err := as.tokenDatastore.Create(
+		&dao.TokenData{
+			OrganizationID:    administrator.OrganizationID,
+			AdministratorID:   administrator.ID,
+			AuthorizationRole: administrator.AuthorizationRole,
+			TokenType:         psJWT.Refresh,
+			ClaimsType:        psJWT.AdminUISession,
+		},
+		psJWT.Refresh,
+		psJWT.AdminUISession,
+	)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate jwt: %s", err.Error())
+	}
+	apiAccessToken, err := as.tokenDatastore.Create(
+		&dao.TokenData{
+			OrganizationID:    administrator.OrganizationID,
+			AdministratorID:   administrator.ID,
+			AuthorizationRole: administrator.AuthorizationRole,
+			TokenType:         psJWT.Access,
+			ClaimsType:        psJWT.APIAuthorization,
+		},
+		psJWT.Access,
+		psJWT.APIAuthorization,
+	)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate jwt: %s", err.Error())
+	}
+	apiRefreshToken, err := as.tokenDatastore.Create(
+		&dao.TokenData{
+			OrganizationID:    administrator.OrganizationID,
+			AdministratorID:   administrator.ID,
+			AuthorizationRole: administrator.AuthorizationRole,
+			TokenType:         psJWT.Refresh,
+			ClaimsType:        psJWT.APIAuthorization,
+		},
+		psJWT.Refresh,
+		psJWT.APIAuthorization,
+	)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate jwt: %s", err.Error())
+	}
+	return &accountpb.VerificationResponse{
+		AdminUiAccessToken:  adminUIAccessToken,
+		AdminUiRefreshToken: adminUIRefreshToken,
+		ApiAccessToken:      apiAccessToken,
+		ApiRefreshToken:     apiRefreshToken,
+	}, nil
+}
