@@ -158,3 +158,14 @@ curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:808
 ```
 
 This API should return the organization data.
+
+### /v1/install-keys
+
+```bash
+curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/install-keys \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <api-access-token>" \
+    -d '{"administratorEmail": "<email>"}'
+```
+
+This API should persist an install key associated with this administrator and respond with the key.
