@@ -59,10 +59,31 @@ func (ik *installKeys) Create(administrator *dao.Administrator) (string, error) 
 	return installKeyJWT, nil
 }
 
-func (ik *installKeys) ReadByKey(key string) (*dao.InstallKey, error) {
-	return nil, nil
+func (ik *installKeys) Validate(installKeyJWT string) error {
+	sum := sha256.Sum256([]byte(installKeyJWT))
+	installKeyHash := hex.EncodeToString(sum[:])
+	var id string
+	err := ik.db.QueryRow(queries.InstallKeysSelect, installKeyHash).Scan(&id)
+	if err != nil {
+		return err
+	}
+	// if we found a row, the hashes match and all that's left is to decode the JWT
+	return psJWT.DecodeJWT(ik.installKeySecret, installKeyJWT, psJWT.InstallKey)
 }
 
-func (ik *installKeys) DeleteByKey(key string) error {
-	return nil
+func (ik *installKeys) Delete(installKeyJWT string) (int64, error) {
+	sum := sha256.Sum256([]byte(installKeyJWT))
+	installKeyHash := hex.EncodeToString(sum[:])
+
+	result, err := ik.db.Exec(queries.InstallKeysDelete, installKeyHash)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsDeleted, nil
 }

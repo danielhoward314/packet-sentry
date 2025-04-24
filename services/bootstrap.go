@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danielhoward314/packet-sentry/dao"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
 )
@@ -33,18 +34,21 @@ type bootstrapService struct {
 	BaseLogger *slog.Logger
 	CACert     *x509.Certificate
 	CAKey      *rsa.PrivateKey
+	Datastore  *dao.Datastore
 	Logger     *slog.Logger
 }
 
 func NewBootstrapService(
+	datastore *dao.Datastore,
 	logger *slog.Logger,
 	caCert *x509.Certificate,
 	caKey *rsa.PrivateKey,
 ) pbBootstrap.BootstrapServiceServer {
 	return &bootstrapService{
-		CACert: caCert,
-		CAKey:  caKey,
-		Logger: logger,
+		Datastore: datastore,
+		CACert:    caCert,
+		CAKey:     caKey,
+		Logger:    logger,
 	}
 }
 
@@ -80,9 +84,18 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 		}
 	} else {
 		logger.Info("certificate request is not renewal, checking install key in request against persisted one")
-		// TODO: check installKey with another micro-service, i.e. the one that issued the installKey
 		if req.InstallKey == "" {
 			return nil, fmt.Errorf("missing install key for first certificate request")
+		}
+		err = bs.Datastore.InstallKeys.Validate(req.InstallKey)
+		if err != nil {
+			return nil, fmt.Errorf("error validating install key: %v", err)
+		}
+		rowsDeleted, err := bs.Datastore.InstallKeys.Delete(req.InstallKey)
+		if err != nil {
+			logger.Warn("error deleting install key", psLog.KeyError, err)
+		} else if rowsDeleted == 0 {
+			logger.Warn("no install key deleted after validation")
 		}
 	}
 

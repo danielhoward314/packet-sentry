@@ -205,6 +205,19 @@ func DecodeJWT(secret string, tokenString string, claimsType ClaimsType) error {
 			return errors.New(TokenExpiredError)
 		}
 		return nil
+	case InstallKey:
+		claims := &InstallKeyClaims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
+		if err != nil {
+			return errors.New("failed to parse token")
+		}
+		if !token.Valid {
+			return errors.New(InvalidTokenError)
+		}
+		if claims.ExpiresAt.Before(time.Now()) {
+			return errors.New(TokenExpiredError)
+		}
+		return nil
 	}
 	return errors.New("unknown claims type")
 }
@@ -216,6 +229,6 @@ func GetClaimsTypeFromProtoEnum(ct authpb.ClaimsType) (ClaimsType, error) {
 	case authpb.ClaimsType_API_AUTHORIZATION:
 		return APIAuthorization, nil
 	default:
-		return AdminUISession, errors.New("invalid claims type")
+		return UnspecifiedClaim, errors.New("invalid claims type")
 	}
 }

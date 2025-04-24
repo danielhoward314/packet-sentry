@@ -4,3 +4,7 @@ const InstallKeysInsert = `INSERT INTO install_keys (key_hash, key_hash_type, ad
 VALUES ($1, $2, $3)
 RETURNING id
 `
+
+const InstallKeysSelect = `SELECT id FROM install_keys where key_hash = $1`
+
+const InstallKeysDelete = `DELETE FROM install_keys where key_hash = $1`

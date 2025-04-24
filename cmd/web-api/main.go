@@ -103,7 +103,7 @@ func main() {
 
 	// secret for JWT install key generation
 	installKeySecret := os.Getenv("INSTALL_KEY_SECRET")
-	if refreshTokenSecret == "" {
+	if installKeySecret == "" {
 		log.Fatal("error: INSTALL_KEY_SECRET is empty")
 	}
 

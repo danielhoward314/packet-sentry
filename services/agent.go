@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/danielhoward314/packet-sentry/dao"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 )
@@ -20,6 +21,7 @@ type agentService struct {
 	// TODO: obviously this is just for PoC purposes
 	commandCounter   int
 	bpfCounter       int
+	datastore        *dao.Datastore
 	logger           *slog.Logger
 	testBPFResponses []*pbAgent.BPFConfig
 }
@@ -30,7 +32,7 @@ func buildInterfaceCaptureMap(captures map[uint64]*pbAgent.CaptureConfig) *pbAge
 	}
 }
 
-func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
+func NewAgentService(datastore *dao.Datastore, logger *slog.Logger) pbAgent.AgentServiceServer {
 	/*
 		linux loopback is lo
 		darwin loopback is lo0
@@ -125,6 +127,7 @@ func NewAgentService(logger *slog.Logger) pbAgent.AgentServiceServer {
 	}
 
 	return &agentService{
+		datastore:        datastore,
 		logger:           logger,
 		testBPFResponses: testBPFResponses,
 	}

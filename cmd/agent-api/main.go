@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"log/slog"
 	"net"
@@ -14,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/danielhoward314/packet-sentry/cmd"
+	psPostgres "github.com/danielhoward314/packet-sentry/dao/postgres"
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
 	"github.com/danielhoward314/packet-sentry/services"
@@ -61,14 +64,45 @@ func main() {
 	tlsServer := grpc.NewServer(grpc.Creds(tlsCreds))
 	mtlsServer := grpc.NewServer(grpc.Creds(mtlsCreds))
 
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	sslMode := os.Getenv("POSTGRES_SSLMODE")
+	user := os.Getenv("POSTGRES_USER")
+	applicationDB := os.Getenv("POSTGRES_APPLICATION_DATABASE")
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host,
+		port,
+		user,
+		password,
+		applicationDB,
+		sslMode,
+	)
+	logger.Info("connecting to postgres")
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal("Error connecting to the postgres:", err)
+	}
+	defer db.Close()
+
+	// secret for JWT install key validation
+	installKeySecret := os.Getenv("INSTALL_KEY_SECRET")
+	if installKeySecret == "" {
+		log.Fatal("error: INSTALL_KEY_SECRET is empty")
+	}
+
+	datastore := psPostgres.NewDatastore(db, installKeySecret)
+
 	bootstrapService := services.NewBootstrapService(
+		datastore,
 		logger,
 		certs.CACert,
 		certs.CAKey,
 	)
 	pbBootstrap.RegisterBootstrapServiceServer(tlsServer, bootstrapService)
 
-	agentService := services.NewAgentService(logger)
+	agentService := services.NewAgentService(datastore, logger)
 	pbAgent.RegisterAgentServiceServer(mtlsServer, agentService)
 
 	ctx, cancel := context.WithCancel(context.Background())
