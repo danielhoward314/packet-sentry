@@ -10,6 +10,8 @@ const (
 	KeyBPFHash = "bpfHash"
 	// KeyCaptureConfig is the key name constant "captureConfig" for use in the structured logger
 	KeyCaptureConfig = "captureConfig"
+	// KeyCertFingerprint is the key name constant "cert_fingerprint" for use in the structured logger
+	KeyCertFingerprint = "cert_fingerprint"
 	// KeyCertificateSigningRequest is the key name constant "certificateSigningRequest" for use in the structured logger
 	KeyCertificateSigningRequest = "certificateSigningRequest"
 	// KeyCommand is the key name constant "command" for use in the structured logger
@@ -20,6 +22,8 @@ const (
 	KeyDroppedPacket = "droppedPacket"
 	// KeyError is the key name constant "error" for use in the structured logger
 	KeyError = "error"
+	// KeyExistingCertFingerprint is the key name constant "existing_cert_fingerprint" for use in the structured logger
+	KeyExistingCertFingerprint = "existing_cert_fingerprint"
 	// KeyFunction is the key name constant "function" for use in the structured logger
 	KeyFunction = "function"
 	// KeyOS is the key name constant "os" for use in the structured logger

@@ -10,6 +10,7 @@ import (
 func NewDatastore(db *sql.DB, installKeySecret string) *dao.Datastore {
 	return &dao.Datastore{
 		Administrators: NewAdministrators(db),
+		Devices:        NewDevices(db),
 		InstallKeys:    NewInstallKeys(db, installKeySecret),
 		Organizations:  NewOrganizations(db),
 	}

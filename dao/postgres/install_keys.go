@@ -52,23 +52,32 @@ func (ik *installKeys) Create(administrator *dao.Administrator) (string, error) 
 	sum := sha256.Sum256([]byte(installKeyJWT))
 	installKeyHash := hex.EncodeToString(sum[:])
 	var id string
-	err = ik.db.QueryRow(queries.InstallKeysInsert, installKeyHash, InstallKeyHashTypeSHA256, administrator.ID).Scan(&id)
+	err = ik.db.QueryRow(queries.InstallKeysInsert, installKeyHash, InstallKeyHashTypeSHA256, administrator.ID, administrator.OrganizationID).Scan(&id)
 	if err != nil {
 		return "", err
 	}
 	return installKeyJWT, nil
 }
 
-func (ik *installKeys) Validate(installKeyJWT string) error {
+func (ik *installKeys) Validate(installKeyJWT string) (*dao.InstallKey, error) {
+	err := psJWT.DecodeJWT(ik.installKeySecret, installKeyJWT, psJWT.InstallKey)
+	if err != nil {
+		return nil, err
+	}
+
 	sum := sha256.Sum256([]byte(installKeyJWT))
 	installKeyHash := hex.EncodeToString(sum[:])
-	var id string
-	err := ik.db.QueryRow(queries.InstallKeysSelect, installKeyHash).Scan(&id)
+
+	var key dao.InstallKey
+	err = ik.db.QueryRow(queries.InstallKeysSelect, installKeyHash).Scan(
+		&key.AdministratorID,
+		&key.OrganizationID,
+	)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// if we found a row, the hashes match and all that's left is to decode the JWT
-	return psJWT.DecodeJWT(ik.installKeySecret, installKeyJWT, psJWT.InstallKey)
+
+	return &key, nil
 }
 
 func (ik *installKeys) Delete(installKeyJWT string) (int64, error) {

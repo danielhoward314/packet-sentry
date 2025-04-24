@@ -32,10 +32,13 @@ CREATE TABLE IF NOT EXISTS administrators (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_administrators_email ON administrators(email);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX IF EXISTS idx_administrators_email;
 DROP TABLE IF EXISTS administrators;
 DROP TYPE IF EXISTS authorization_role;
 DROP TYPE IF EXISTS password_hash_type;

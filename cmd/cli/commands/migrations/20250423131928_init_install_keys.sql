@@ -21,13 +21,21 @@ CREATE TABLE IF NOT EXISTS install_keys (
         FOREIGN KEY(administrator_id) 
         REFERENCES administrators(id)
         ON DELETE CASCADE,
+    organization_id UUID NOT NULL,
+    CONSTRAINT fk_organization
+        FOREIGN KEY(organization_id)
+        REFERENCES organizations(id)
+        ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_install_keys_key_hash ON install_keys(key_hash);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX IF EXISTS idx_install_keys_key_hash;
 DROP TABLE IF EXISTS install_keys;
 DROP TYPE IF EXISTS key_hash_type;
 -- +goose StatementEnd
