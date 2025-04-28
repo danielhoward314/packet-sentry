@@ -1,5 +1,7 @@
 # Agent
 
+The Packet Sentry Agent is the program that a user would install on endpoints to report packet capture telemetry. It runs as a daemon on Unix and as a background Service on Windows. The main Go executable in `cmd/agent/main.go` is packaged into an installer for each platform (.pkg on macOS, .msi on Windows, and .deb/.rpm on Linux).
+
 ## Agent goroutine tree
 
 ```

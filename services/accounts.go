@@ -15,7 +15,7 @@ import (
 	"github.com/danielhoward314/packet-sentry/dao"
 	"github.com/danielhoward314/packet-sentry/dao/postgres"
 	psJWT "github.com/danielhoward314/packet-sentry/jwt"
-	accountpb "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+	pbAccounts "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 
 // accountsService implements the account gRPC service
 type accountsService struct {
-	accountpb.UnimplementedAccountsServiceServer
+	pbAccounts.UnimplementedAccountsServiceServer
 	datastore             *dao.Datastore
 	registrationDatastore dao.RegistrationDatastore
 	tokenDatastore        dao.TokenDatastore
@@ -36,7 +36,7 @@ func NewAccountsService(
 	registrationDatastore dao.RegistrationDatastore,
 	tokenDatastore dao.TokenDatastore,
 	smtpDialer *gomail.Dialer,
-) accountpb.AccountsServiceServer {
+) pbAccounts.AccountsServiceServer {
 	return &accountsService{
 		datastore:             datastore,
 		registrationDatastore: registrationDatastore,
@@ -46,7 +46,7 @@ func NewAccountsService(
 }
 
 // Signup creates a new organization and admin, and triggers primary admin email verification
-func (as *accountsService) Signup(ctx context.Context, request *accountpb.SignupRequest) (*accountpb.SignupResponse, error) {
+func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.SignupRequest) (*pbAccounts.SignupResponse, error) {
 	if request.OrganizationName == "" {
 		slog.Error("invalid organization name")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid organization name")
@@ -123,13 +123,13 @@ func (as *accountsService) Signup(ctx context.Context, request *accountpb.Signup
 		slog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to send administrator email verification email %s", err.Error())
 	}
-	return &accountpb.SignupResponse{
+	return &pbAccounts.SignupResponse{
 		Token: token,
 	}, nil
 }
 
 // Verify validates email verification codes, updates the administrators.verified column & creates admin UI & API JWTs
-func (as *accountsService) Verify(ctx context.Context, request *accountpb.VerificationRequest) (*accountpb.VerificationResponse, error) {
+func (as *accountsService) Verify(ctx context.Context, request *pbAccounts.VerificationRequest) (*pbAccounts.VerificationResponse, error) {
 	if request.Token == "" {
 		slog.Error("invalid token")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid token")
@@ -221,7 +221,7 @@ func (as *accountsService) Verify(ctx context.Context, request *accountpb.Verifi
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate jwt: %s", err.Error())
 	}
-	return &accountpb.VerificationResponse{
+	return &pbAccounts.VerificationResponse{
 		AdminUiAccessToken:  adminUIAccessToken,
 		AdminUiRefreshToken: adminUIRefreshToken,
 		ApiAccessToken:      apiAccessToken,

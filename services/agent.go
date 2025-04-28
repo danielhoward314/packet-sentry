@@ -2,169 +2,166 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"time"
 
-	"github.com/cespare/xxhash"
+	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
 	"github.com/danielhoward314/packet-sentry/dao"
+	"github.com/danielhoward314/packet-sentry/dao/postgres"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 )
 
 type agentService struct {
 	pbAgent.UnimplementedAgentServiceServer
-	// TODO: obviously this is just for PoC purposes
-	commandCounter   int
-	bpfCounter       int
-	datastore        *dao.Datastore
-	logger           *slog.Logger
-	testBPFResponses []*pbAgent.BPFConfig
+	datastore *dao.Datastore
+	logger    *slog.Logger
+	jetStream nats.JetStream
 }
 
-func buildInterfaceCaptureMap(captures map[uint64]*pbAgent.CaptureConfig) *pbAgent.InterfaceCaptureMap {
-	return &pbAgent.InterfaceCaptureMap{
-		Captures: captures,
-	}
-}
-
-func NewAgentService(datastore *dao.Datastore, logger *slog.Logger) pbAgent.AgentServiceServer {
-	/*
-		linux loopback is lo
-		darwin loopback is lo0
-		windows loopback is \Device\NPF_Loopback
-	*/
-	testBPFResponses := []*pbAgent.BPFConfig{
-		{
-			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("tcp port 3000"): {
-						Bpf:         "tcp port 3000",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-					xxhash.Sum64String("udp port 53"): {
-						Bpf:         "udp port 53",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-				}),
-			},
-			Update: map[string]*pbAgent.InterfaceCaptureMap{},
-			Delete: map[string]*pbAgent.InterfaceCaptureMap{},
-		},
-		{
-			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("icmp"): {
-						Bpf:         "icmp",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-				}),
-			},
-			Update: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("tcp port 3000"): {
-						Bpf:         "tcp port 3000",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-						Timeout:     int64(time.Second * 2),
-					},
-				}),
-			},
-			Delete: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("upd port 53"): {
-						Bpf:         "upd port 53",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-				}),
-			},
-		},
-		{
-			Create: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("udp port 5353"): {
-						Bpf:         "udp port 5353",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-				}),
-			},
-			Update: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("icmp"): {
-						Bpf:         "icmp",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     8192,
-					},
-				}),
-			},
-			Delete: map[string]*pbAgent.InterfaceCaptureMap{
-				"lo0": buildInterfaceCaptureMap(map[uint64]*pbAgent.CaptureConfig{
-					xxhash.Sum64String("tcp port 3000"): {
-						Bpf:         "tcp port 3000",
-						DeviceName:  "lo0",
-						Promiscuous: false,
-						SnapLen:     65535,
-					},
-				}),
-			},
-		},
-	}
-
+func NewAgentService(js nats.JetStreamContext, datastore *dao.Datastore, logger *slog.Logger) pbAgent.AgentServiceServer {
 	return &agentService{
-		datastore:        datastore,
-		logger:           logger,
-		testBPFResponses: testBPFResponses,
+		datastore: datastore,
+		jetStream: js,
+		logger:    logger,
 	}
 }
 
 func (as *agentService) ReportInterfaces(ctx context.Context, req *pbAgent.ReportInterfacesRequest) (*pbAgent.Empty, error) {
 	logger := as.logger.With(psLog.KeyFunction, "agentService.ReportInterfaces")
 
+	osUniqueIdentifier, err := as.getSubjectCNFromClientCert(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
+	existingDevice, err := as.datastore.Devices.GetDeviceByPredicate(postgres.PredicateOSUniqueIdentifier, osUniqueIdentifier)
+	if err != nil {
+		logger.Error("error looking up device by os_unique_identifier", psLog.KeyError, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "%s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error looking up device by os_unique_identifier: %v", err))
+	}
+	if existingDevice == nil {
+		logger.Error("device record is nil")
+		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("device record nil when selected by os_unique_identifier: %s", osUniqueIdentifier))
+	}
+
+	interfaces := make([]string, len(req.Interfaces))
+
 	for _, iface := range req.Interfaces {
 		logger.Info("received interface name", psLog.KeyDeviceName, iface.Name)
+		interfaces = append(interfaces, iface.Name)
 	}
+
+	existingDevice.Interfaces = interfaces
+	existingDevice.PCapVersion = req.PcapVersion
+
+	err = as.datastore.Devices.Update(existingDevice)
+	if err != nil {
+		logger.Error("error updating device", psLog.KeyError, err)
+		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error updating device: %v", err))
+	}
+
 	return &pbAgent.Empty{}, nil
 }
 
-func (as *agentService) PollCommand(ctx context.Context, req *pbAgent.Empty) (*pbAgent.Command, error) {
+func (as *agentService) PollCommand(ctx context.Context, req *pbAgent.Empty) (*pbAgent.CommandsResponse, error) {
 	logger := as.logger.With(psLog.KeyFunction, "agentService.PollCommand")
 
-	// TODO: this is for testing purposes
-	logger.Info("received poll request, sending command", "commandCounter", as.commandCounter)
-	if as.commandCounter == 0 {
-		as.commandCounter += 1
-		return &pbAgent.Command{
-			Name: "send_interfaces",
+	osUniqueIdentifier, err := as.getSubjectCNFromClientCert(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
+	subject := "cmds." + osUniqueIdentifier
+	durable := osUniqueIdentifier
+	stream := "COMMANDS"
+
+	// Try to bind to the existing durable consumer
+	sub, err := as.jetStream.PullSubscribe(subject, "",
+		nats.Bind(stream, durable),
+		nats.ManualAck(),
+		nats.PullMaxWaiting(128),
+	)
+
+	if err == nats.ErrConsumerNotFound {
+		// First-time setup: create the durable consumer explicitly
+		sub, err = as.jetStream.PullSubscribe(subject, durable,
+			nats.BindStream(stream),
+			nats.ManualAck(),
+			nats.PullMaxWaiting(128),
+		)
+	}
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Pull up to 10 commands or wait 1s
+	msgs, err := sub.Fetch(10, nats.MaxWait(1*time.Second))
+	if err != nil && err != nats.ErrTimeout {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var commands []string
+	for _, msg := range msgs {
+		commands = append(commands, string(msg.Data))
+		msg.Ack()
+	}
+	if len(commands) > 0 {
+		logger.Info("sending commands received from NATS stream")
+
+		pbCmds := make([]*pbAgent.Command, len(commands))
+		for _, cmdStr := range commands {
+			pbCmds = append(pbCmds, &pbAgent.Command{
+				Name: cmdStr,
+			})
+		}
+
+		return &pbAgent.CommandsResponse{
+			Commands: pbCmds,
+		}, nil
+	} else {
+		logger.Info("no commands on NATS stream, sending noop")
+		return &pbAgent.CommandsResponse{
+			Commands: []*pbAgent.Command{{
+				Name: "noop",
+			}},
 		}, nil
 	}
-	return &pbAgent.Command{
-		Name: "get_bpf_config",
-	}, nil
 }
+
 func (as *agentService) GetBPFConfig(ctx context.Context, req *pbAgent.Empty) (*pbAgent.BPFConfig, error) {
 	logger := as.logger.With(psLog.KeyFunction, "agentService.GetBPFConfig")
 
-	resp := as.testBPFResponses[as.bpfCounter]
-	logger.Info("sending BPF response", "bpfResponseCounter", as.bpfCounter)
-	fmt.Printf("sending BPF response index %d\n", as.bpfCounter)
-	as.bpfCounter = (as.bpfCounter + 1) % len(as.testBPFResponses)
-	return resp, nil
+	osUniqueIdentifier, err := as.getSubjectCNFromClientCert(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
+	logger.Info("reading device by os_unique_identifier from database")
+	device, err := as.datastore.Devices.GetDeviceByPredicate(postgres.PredicateOSUniqueIdentifier, osUniqueIdentifier)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if device == nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to read device record"))
+	}
+	return buildBPFConfig(device), nil
 }
 
 func (as *agentService) SendPacketEvent(stream pbAgent.AgentService_SendPacketEventServer) error {
@@ -207,4 +204,117 @@ func (as *agentService) SendPacketEvent(stream pbAgent.AgentService_SendPacketEv
 			}
 		}
 	}
+}
+
+func (as *agentService) getSubjectCNFromClientCert(ctx context.Context) (string, error) {
+	logger := as.logger.With(psLog.KeyFunction, "agentService.getSubjectCNFromClientCert")
+	logger.Info("getting peer from context")
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("no peer info")
+	}
+
+	tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok || len(tlsInfo.State.PeerCertificates) == 0 {
+		return "", fmt.Errorf("no client certificate")
+	}
+
+	clientCert := tlsInfo.State.PeerCertificates[0]
+	return clientCert.Subject.CommonName, nil
+}
+
+func buildBPFConfig(device *dao.Device) *pbAgent.BPFConfig {
+	create := make(map[string]*pbAgent.InterfaceCaptureMap)
+	update := make(map[string]*pbAgent.InterfaceCaptureMap)
+	delete := make(map[string]*pbAgent.InterfaceCaptureMap)
+
+	// Helper to deep-copy a dao.CaptureConfig to pbAgent.CaptureConfig
+	convertConfig := func(c dao.CaptureConfig) *pbAgent.CaptureConfig {
+		return &pbAgent.CaptureConfig{
+			Bpf:         c.Bpf,
+			DeviceName:  c.DeviceName,
+			Promiscuous: c.Promiscuous,
+			SnapLen:     c.SnapLen,
+		}
+	}
+
+	// Helper to add a capture into a map
+	addCapture := func(m map[string]*pbAgent.InterfaceCaptureMap, iface string, bpfID uint64, config dao.CaptureConfig) {
+		_, exists := m[iface]
+		if !exists {
+			m[iface] = &pbAgent.InterfaceCaptureMap{Captures: make(map[uint64]*pbAgent.CaptureConfig)}
+		}
+		m[iface].Captures[bpfID] = convertConfig(config)
+	}
+
+	// Build sets for faster lookup
+	current := device.InterfaceBPFAssociations
+	previous := device.PreviousAssociations
+
+	// First pass: detect Creates and Updates
+	for currentIface, currentCaptures := range current {
+		prevCaptures, currentIfaceExistsInPrevious := previous[currentIface]
+		if !currentIfaceExistsInPrevious {
+			// the interface name did not have an entry in the previous associations
+			// so no need to check the nested map,
+			// just add all capture configs for this interface to the create map
+			for currentBPFHash, currentConfig := range currentCaptures {
+				addCapture(create, currentIface, currentBPFHash, currentConfig)
+			}
+			continue
+		}
+
+		for currentBPFHash, currentConfig := range currentCaptures {
+			prevConfig, currentBPFHashExistsInPrevious := prevCaptures[currentBPFHash]
+			if !currentBPFHashExistsInPrevious {
+				// the interface name did have an entry in the outer map, but the BPF hash did not,
+				// so add it to the create map
+				addCapture(create, currentIface, currentBPFHash, currentConfig)
+			} else {
+				// the interface name and the BPF hash existed in outer and inner maps, respectively,
+				// so check for delta and, if there is a diff, add to the update map
+				if configsDiffer(prevConfig, currentConfig) {
+					addCapture(update, currentIface, currentBPFHash, currentConfig)
+				}
+			}
+		}
+	}
+
+	// Second pass: detect Deletes
+	for previousIface, prevCaptures := range previous {
+		currCaptures, previousIfaceExistsInCurrent := current[previousIface]
+		if !previousIfaceExistsInCurrent {
+			// the interface name did have an entry in previous and has no entry in current
+			// no need to check the existence of the BPF hashes in the nested map
+			// we have to delete all BPF hashes for this interface
+			for bpfID := range prevCaptures {
+				addCapture(delete, previousIface, bpfID, prevCaptures[bpfID])
+			}
+			continue
+		}
+
+		for prevBPFHash := range prevCaptures {
+			_, previousBPFHashExistsInCurrent := currCaptures[prevBPFHash]
+			if !previousBPFHashExistsInCurrent {
+				// the interface name has an entry in both previous and current
+				// but the BPF hash from the previous nested map has no corresponding entry
+				// in the current nested map, so add it to the delete map
+				addCapture(delete, previousIface, prevBPFHash, prevCaptures[prevBPFHash])
+			}
+		}
+	}
+
+	return &pbAgent.BPFConfig{
+		Create: create,
+		Update: update,
+		Delete: delete,
+	}
+}
+
+// configsDiffer compares two dao.CaptureConfig structs for any differences
+func configsDiffer(a, b dao.CaptureConfig) bool {
+	return a.Bpf != b.Bpf ||
+		a.DeviceName != b.DeviceName ||
+		a.Promiscuous != b.Promiscuous ||
+		a.SnapLen != b.SnapLen
 }

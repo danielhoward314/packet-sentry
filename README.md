@@ -37,10 +37,18 @@ Use docker compose to build the `agent-api`, `cli`, `gateway`, `web-api`, and `w
 docker compose --file compose.yml build
 ```
 
+Initialize the database:
+
+```
+docker compose up -d postgres
+docker compose run --rm cli create db
+docker compose run --rm cli migrate up
+```
+
 Run the built containers:
 
 ```
-docker compose --file compose.yml up agent-api gateway ui web-api
+docker compose --file compose.yml up agent-api gateway web-api web-console
 ```
 
 The `web-console` container is an nginx server that serves the vite production build of the Vue SPA as static files.
@@ -55,6 +63,7 @@ In order to create a Packet Sentry account, navigate to `web-console.packet-sent
 - Agent Installers: [Linux](./docs/agent_installer_linux.md), [macOS](./docs/agent_installer_macos.md), and [Windows](./docs/agent_installer_windows)
 - [DB Migrations](./docs/db_migrations.md)
 - [Protos](./docs/protos.md)
+- [NATS](./docs/nats.md)
 - [authorization](./docs/authorization.md)
 - [Local containers](./docs/local_containers.md) such as `redis` or `maildev`
 - [tailwindcss](./docs/tailwindcss.md)

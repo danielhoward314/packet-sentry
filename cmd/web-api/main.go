@@ -16,15 +16,17 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/gomail.v2"
 
 	psPostgres "github.com/danielhoward314/packet-sentry/dao/postgres"
 	psRedis "github.com/danielhoward314/packet-sentry/dao/redis"
-	accountspb "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
-	authpb "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
-	orgspb "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
+	pbAccounts "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
+	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
+	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 	"github.com/danielhoward314/packet-sentry/services"
 )
 
@@ -111,6 +113,30 @@ func main() {
 	registrationDatastore := psRedis.NewRegistrationDatastore(redisClient)
 	tokenDatastore := psRedis.NewTokenDatastore(redisClient, accessTokenJWTSecret, refreshTokenSecret)
 
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL == "" {
+		natsURL = nats.DefaultURL
+	}
+	logger.Info("connecting to NATS", "NATS_URL", natsURL)
+
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer nc.Drain()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "COMMANDS",
+		Subjects: []string{"cmds.*"},
+	})
+	if err != nil && err != nats.ErrStreamNameAlreadyInUse {
+		log.Fatal(err)
+	}
+
 	logger.Info("injecting dependencies into service layer")
 	// TODO: inject context into all of the services
 	accountSvc := services.NewAccountsService(
@@ -130,9 +156,12 @@ func main() {
 		datastore,
 	)
 
-	accountspb.RegisterAccountsServiceServer(server, accountSvc)
-	authpb.RegisterAuthServiceServer(server, authSvc)
-	orgspb.RegisterOrganizationsServiceServer(server, organizationsSvc)
+	devicesSvc := services.NewDevicesService(datastore, js)
+
+	pbAccounts.RegisterAccountsServiceServer(server, accountSvc)
+	pbAuth.RegisterAuthServiceServer(server, authSvc)
+	pbOrgs.RegisterOrganizationsServiceServer(server, organizationsSvc)
+	pbDevices.RegisterDevicesServiceServer(server, devicesSvc)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup

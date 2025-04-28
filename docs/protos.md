@@ -1,5 +1,11 @@
 ## Protos
 
+## Pre-requisites
+
+[Install](https://github.com/grpc-ecosystem/grpc-gateway?tab=readme-ov-file#installation) the required tooling to compile the protos and generate the Go files.
+
+## Generate Go files from protos
+
 The protobuf definitions are in the `proto` directory. There is a script for compiling these definitions with `protoc`:
 
 ```
@@ -36,7 +42,7 @@ These protos power the web console experience.
 The workflow consists of:
 
 1. If adding a new service, add a directory and .proto file with service under the `/proto` directory, RPC, and message definitions; otherwise extend an existing service with new RPCs and any new messages.
-2. Run the script `./script/generate_protos` to generate the Go files in `protogen/golang`.
+2. Add the proto file to the `./script/generate_protos` script and run it to generate the Go files in `protogen/golang`.
 3. Create a file in `/services` for the service. Define a private struct that implements the methods of the gRPC service interface. Write business logic in this implementation. Define a `New<gRPCServiceName>Svc` func whose function signature returns the interface and whose function body returns the private struct with member fields for any required dependencies.
 4. Prepare any dependencies and instantiate (3) in `cmd/web-api/main.go`, doing dependency injection as needed. Register the service instance on the main gRPC server.
 5. Register the gRPC service handler on the gateway's http serve mux.

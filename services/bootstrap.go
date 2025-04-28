@@ -6,15 +6,22 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"database/sql"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/big"
 	"strings"
 	"time"
 
+	"github.com/nats-io/nats.go"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/danielhoward314/packet-sentry/dao"
+	"github.com/danielhoward314/packet-sentry/dao/postgres"
 	psLog "github.com/danielhoward314/packet-sentry/internal/log"
 	pbBootstrap "github.com/danielhoward314/packet-sentry/protogen/golang/bootstrap"
 )
@@ -25,10 +32,12 @@ type bootstrapService struct {
 	CACert     *x509.Certificate
 	CAKey      *rsa.PrivateKey
 	Datastore  *dao.Datastore
+	JetStream  nats.JetStream
 	Logger     *slog.Logger
 }
 
 func NewBootstrapService(
+	js nats.JetStreamContext,
 	datastore *dao.Datastore,
 	logger *slog.Logger,
 	caCert *x509.Certificate,
@@ -38,6 +47,7 @@ func NewBootstrapService(
 		Datastore: datastore,
 		CACert:    caCert,
 		CAKey:     caKey,
+		JetStream: js,
 		Logger:    logger,
 	}
 }
@@ -48,51 +58,60 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 	logger.Info("decoding CSR", psLog.KeyCertificateSigningRequest, req.Csr)
 	block, _ := pem.Decode([]byte(req.Csr))
 	if block == nil || block.Type != "CERTIFICATE REQUEST" {
-		return nil, fmt.Errorf("bad CSR")
+		return nil, status.Errorf(codes.InvalidArgument, "%s", fmt.Sprintf("bad CSR"))
 	}
 	csr, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse CSR")
+		return nil, status.Errorf(codes.InvalidArgument, "%s", fmt.Sprintf("cannot parse CSR"))
 	}
-	if err := csr.CheckSignature(); err != nil {
-		return nil, fmt.Errorf("bad CSR")
+	err = csr.CheckSignature()
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "%s", fmt.Sprintf("bad CSR"))
 	}
 
-	// DAO struct that will be used to create or update the device
 	device := &dao.Device{
 		OSUniqueIdentifier: csr.Subject.CommonName,
 	}
 
 	if req.IsRenewal {
-		logger.Info("certificate request is renewal, checking cert fingerprint in request against persisted one", psLog.KeyExistingCertFingerprint, req.ExistingCertFingerprint)
-		existingDevice, err := bs.Datastore.Devices.GetDeviceByOSUniqueIdentifier(csr.Subject.CommonName)
+		logger.Info(
+			"certificate request is renewal, checking cert fingerprint in request against persisted one",
+			psLog.KeyExistingCertFingerprint,
+			req.ExistingCertFingerprint,
+		)
+		existingDevice, err := bs.Datastore.Devices.GetDeviceByPredicate(postgres.PredicateOSUniqueIdentifier, csr.Subject.CommonName)
 		if err != nil {
 			logger.Error("error looking up device by os_unique_identifier", psLog.KeyError, err)
-			return nil, fmt.Errorf("error looking up device by os_unique_identifier: %v", err)
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, status.Errorf(codes.NotFound, "%s", err.Error())
+			}
+			return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error looking up device by os_unique_identifier: %v", err))
 		}
 		if existingDevice == nil {
 			logger.Error("device not found by os_unique_identifier")
-			return nil, fmt.Errorf("cannot renew cert for device not found by os_unique_identifier: %s", csr.Subject.CommonName)
+			return nil, status.Errorf(codes.NotFound, "%s", fmt.Sprintf("cannot renew cert for device not found by os_unique_identifier: %s", csr.Subject.CommonName))
 		}
 		if strings.TrimSpace(strings.ToLower(existingDevice.ClientCertFingerprint)) != strings.TrimSpace(strings.ToLower(req.ExistingCertFingerprint)) {
 			logger.Error("client cert fingerprint in request does not match persisted one")
-			return nil, fmt.Errorf("client cert fingerprint in request does not match persisted one")
+			return nil, status.Errorf(codes.Unauthenticated, "%s", fmt.Sprintf("client cert fingerprint in request does not match persisted one"))
 		}
 		device.ID = existingDevice.ID
 		device.OrganizationID = existingDevice.OrganizationID
+		device.PCapVersion = existingDevice.PCapVersion
+		device.Interfaces = existingDevice.Interfaces
 		device.InterfaceBPFAssociations = existingDevice.InterfaceBPFAssociations
 		device.PreviousAssociations = existingDevice.PreviousAssociations
 	} else {
 		logger.Info("certificate request is not renewal, checking install key in request against persisted one")
 		if req.InstallKey == "" {
-			return nil, fmt.Errorf("missing install key for first certificate request")
+			return nil, status.Errorf(codes.Unauthenticated, "%s", fmt.Sprintf("missing install key for first certificate request"))
 		}
 		validatedKey, err := bs.Datastore.InstallKeys.Validate(req.InstallKey)
 		if err != nil {
-			return nil, fmt.Errorf("error validating install key: %v", err)
+			return nil, status.Errorf(codes.Unauthenticated, "%s", fmt.Sprintf("error validating install key: %v", err))
 		}
 		if validatedKey == nil || validatedKey.OrganizationID == "" || validatedKey.AdministratorID == "" {
-			return nil, fmt.Errorf("invalid install key")
+			return nil, status.Errorf(codes.InvalidArgument, "%s", fmt.Sprintf("invalid install key"))
 		}
 		device.OrganizationID = validatedKey.OrganizationID
 		rowsDeleted, err := bs.Datastore.InstallKeys.Delete(req.InstallKey)
@@ -107,7 +126,7 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
 		logger.Error("error generating serial number", psLog.KeyError, err)
-		return nil, fmt.Errorf("error generating serial number %v", err)
+		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error generating serial number %v", err))
 	}
 
 	// Generate new cert from CSR
@@ -126,7 +145,7 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 	certDER, err := x509.CreateCertificate(rand.Reader, template, bs.CACert, csr.PublicKey, bs.CAKey)
 	if err != nil {
 		logger.Error("error creating certificate from CSR", psLog.KeyError, err)
-		return nil, fmt.Errorf("bad CSR")
+		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("bad CSR"))
 	}
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 	fingerprint := sha256.Sum256(certDER)
@@ -140,7 +159,8 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 		device.ClientCertFingerprint = strings.TrimSpace(strings.ToLower(newCertFingerprint))
 		err = bs.Datastore.Devices.Update(device)
 		if err != nil {
-			return nil, fmt.Errorf("error updating device: %v", err)
+			logger.Error("error updating device", psLog.KeyError, err)
+			return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error updating device: %v", err))
 		}
 	} else {
 		logger.Info("creating device with new client cert pem and cert fingerprint")
@@ -148,7 +168,13 @@ func (bs *bootstrapService) RequestCertificate(ctx context.Context, req *pbBoots
 		device.ClientCertFingerprint = strings.TrimSpace(strings.ToLower(newCertFingerprint))
 		err = bs.Datastore.Devices.Create(device)
 		if err != nil {
-			return nil, fmt.Errorf("error creating device: %v", err)
+			logger.Error("error creating device", psLog.KeyError, err)
+			return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("error creating device: %v", err))
+		}
+		_, err = bs.JetStream.Publish("cmds."+csr.Subject.CommonName, []byte("send_interfaces"))
+		if err != nil {
+			logger.Error("command send was not ack'd", psLog.KeyError, err)
+			return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("command send was not ack'd: %v", err))
 		}
 	}
 

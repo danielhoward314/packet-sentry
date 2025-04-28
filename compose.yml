@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   agent-api:
     container_name: packet-sentry-agent-api
@@ -14,6 +13,7 @@ services:
     networks:
       - backend
     depends_on:
+      - nats
       - postgres
       - redis
   cli:
@@ -83,6 +83,7 @@ services:
       - backend
     depends_on:
       - maildev
+      - nats
       - postgres
       - redis
   web-console:
@@ -97,6 +98,14 @@ services:
       backend:
         aliases:
           - web-console.packet-sentry.local
+  nats:
+    image: nats
+    container_name: nats-server
+    ports:
+      - "4222:4222"
+    command: ["-js"]  # Enables JetStream
+    networks:
+      backend:
 
 networks:
   backend:

@@ -13,12 +13,12 @@ import (
 	"github.com/danielhoward314/packet-sentry/dao"
 	"github.com/danielhoward314/packet-sentry/hashes"
 	psJWT "github.com/danielhoward314/packet-sentry/jwt"
-	authpb "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
+	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 )
 
 // authService implements the account gRPC service
 type authService struct {
-	authpb.UnimplementedAuthServiceServer
+	pbAuth.UnimplementedAuthServiceServer
 	datastore      *dao.Datastore
 	tokenDatastore dao.TokenDatastore
 	smtpDialer     *gomail.Dialer
@@ -28,7 +28,7 @@ func NewAuthService(
 	datastore *dao.Datastore,
 	tokenDatastore dao.TokenDatastore,
 	smtpDialer *gomail.Dialer,
-) authpb.AuthServiceServer {
+) pbAuth.AuthServiceServer {
 	return &authService{
 		datastore:      datastore,
 		tokenDatastore: tokenDatastore,
@@ -37,7 +37,7 @@ func NewAuthService(
 }
 
 // ValidateSession validates admin ui session data submitted via a JWT in the request
-func (as *authService) ValidateSession(ctx context.Context, request *authpb.ValidateSessionRequest) (*authpb.ValidateSessionResponse, error) {
+func (as *authService) ValidateSession(ctx context.Context, request *pbAuth.ValidateSessionRequest) (*pbAuth.ValidateSessionResponse, error) {
 	if request.Jwt == "" {
 		slog.Error("invalid session JWT")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid session JWT")
@@ -69,12 +69,12 @@ func (as *authService) ValidateSession(ctx context.Context, request *authpb.Vali
 		}
 		return nil, status.Errorf(codes.Internal, "failed to validate session JWT: %s", err.Error())
 	}
-	return &authpb.ValidateSessionResponse{
+	return &pbAuth.ValidateSessionResponse{
 		Jwt: request.Jwt,
 	}, nil
 }
 
-func (as *authService) Login(ctx context.Context, request *authpb.LoginRequest) (*authpb.LoginResponse, error) {
+func (as *authService) Login(ctx context.Context, request *pbAuth.LoginRequest) (*pbAuth.LoginResponse, error) {
 	if request.Email == "" {
 		slog.Error("invalid email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid email")
@@ -160,7 +160,7 @@ func (as *authService) Login(ctx context.Context, request *authpb.LoginRequest) 
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create session: %s", err.Error())
 	}
-	return &authpb.LoginResponse{
+	return &pbAuth.LoginResponse{
 		AdministratorId:     administrator.ID,
 		OrganizationId:      administrator.OrganizationID,
 		AdministratorName:   administrator.DisplayName,
@@ -174,7 +174,7 @@ func (as *authService) Login(ctx context.Context, request *authpb.LoginRequest) 
 }
 
 // RefreshToken takes in a refesh JWT of a given claims type and, if valid, returns a new access JWT of the same claims type
-func (as *authService) RefreshToken(ctx context.Context, request *authpb.RefreshTokenRequest) (*authpb.RefreshTokenResponse, error) {
+func (as *authService) RefreshToken(ctx context.Context, request *pbAuth.RefreshTokenRequest) (*pbAuth.RefreshTokenResponse, error) {
 	if request.Jwt == "" {
 		slog.Error("invalid refresh JWT")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid refresh JWT")
@@ -210,10 +210,10 @@ func (as *authService) RefreshToken(ctx context.Context, request *authpb.Refresh
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create access JWT: %s", err.Error())
 	}
-	return &authpb.RefreshTokenResponse{Jwt: accessJWT}, nil
+	return &pbAuth.RefreshTokenResponse{Jwt: accessJWT}, nil
 }
 
-func (as *authService) CreateInstallKey(ctx context.Context, request *authpb.CreateInstallKeyRequest) (*authpb.CreateInstallKeyResponse, error) {
+func (as *authService) CreateInstallKey(ctx context.Context, request *pbAuth.CreateInstallKeyRequest) (*pbAuth.CreateInstallKeyResponse, error) {
 	if request.AdministratorEmail == "" {
 		slog.Error("invalid administrator email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid administrator email")
@@ -233,7 +233,7 @@ func (as *authService) CreateInstallKey(ctx context.Context, request *authpb.Cre
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create install key: %s", err.Error())
 	}
-	return &authpb.CreateInstallKeyResponse{
+	return &pbAuth.CreateInstallKeyResponse{
 		InstallKey: installKey,
 	}, nil
 }

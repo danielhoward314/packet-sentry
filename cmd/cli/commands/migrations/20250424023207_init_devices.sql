@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS devices (
         FOREIGN KEY(organization_id) 
         REFERENCES organizations(id)
         ON DELETE CASCADE,
+    pcap_version VARCHAR(255) DEFAULT '',
+    interfaces TEXT[] DEFAULT ARRAY[]::TEXT[],
     interface_bpf_associations JSONB DEFAULT '{}'::jsonb,
     previous_associations JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

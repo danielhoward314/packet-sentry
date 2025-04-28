@@ -19,7 +19,7 @@ docker compose --file compose.yml up web-api gateway
 
 ## Test endpoints
 
-### v1/signup
+### POST v1/signup
 
 To confirm that the container is reachable from your host:
 
@@ -68,7 +68,7 @@ Make the same request again and it should fail due to the uniqueness constraint 
 
 Make the same request with any missing parameters and it should fail.
 
-### v1/verify
+### POST v1/verify
 
 This endpoint requires the token and email code from the `/v1/signup` endpoint.
 
@@ -112,7 +112,7 @@ Use the [jwt debugger](https://jwt.io/) to see the decoded JWT. Note that for ac
 
 4. Should set the administrator's `verified` column value to `true`.
 
-### /v1/session
+### POST /v1/session
 
 This endpoint validates the admin UI session JWTs. The web console makes use of this endpoint to handle session management. When a user's admin UI sesssion
 
@@ -124,7 +124,7 @@ curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:80
 
 Assuming a valid JWT, this API should respond with the same JWT.
 
-### /v1/refresh
+### POST /v1/refresh
 
 This endpoint is used to request a new access token by providing a refresh token and the claims type. The claims type should correspond to the one in the refresh token, i.e. use claims type 1 for an admin UI refresh token and 2 for an API refresh token.
 
@@ -139,7 +139,7 @@ Happy path side-effects:
 1. A new access token is persisted in Redis for the claims type in the request.
 2. The API responds with this new JWT.
 
-### /v1/login
+### POST /v1/login
 
 ```bash
 curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/login \
@@ -149,7 +149,7 @@ curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:80
 
 This API should respond with the organization, administrator, and token data that the web console uses for context and session management.
 
-### /v1/organizations
+### GET /v1/organizations/{id}
 
 ```bash
 curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/organizations/<organization-id> \
@@ -159,7 +159,7 @@ curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:808
 
 This API should return the organization data.
 
-### /v1/install-keys
+### POST /v1/install-keys
 
 ```bash
 curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:8080/v1/install-keys \
@@ -169,3 +169,22 @@ curl --cacert ./certs/ca.cert.pem -X POST https://gateway.packet-sentry.local:80
 ```
 
 This API should persist an install key associated with this administrator and respond with the key.
+
+### GET /v1/devices/{id}
+
+curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/devices/<device-id> \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemF0aW9uX3JvbGUiOiJQUklNQVJZX0FETUlOIiwib3JnYW5pemF0aW9uX2lkIjoiZDkzZWU3ODEtMWI0Yi00MDFkLWI5NTktYzk4ZDM2ZWNhNjQ4IiwiaXNzIjoid2ViLWFwaS5wYWNrZXQtc2VudHJ5Iiwic3ViIjoiMWFiMTkzNzktZWIxNC00NTc0LTg2N2EtN2FmNTRkNWQ1MWZhIiwiYXVkIjpbInBhY2tldC1zZW50cnktYXBpIl0sImV4cCI6MTc0NTgwMDY5MywiaWF0IjoxNzQ1Nzk5NzkzLCJqdGkiOiIwYmRhMWY1MS1jMjY1LTRkZjUtOGYyMy1kZTBhM2E2YTgzZjQifQ.TcJC4tUpoymZAv4X0SGi9seVpePjAz8msD2DJ7VEJO4"
+
+### GET /v1/devices
+
+curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/devices?organizationId=<org-id> \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <api-access-token>"
+
+### PUT /v1/devices/{id}
+
+curl --cacert ./certs/ca.cert.pem -X PUT https://gateway.packet-sentry.local:8080/v1/devices/750baff0-8c7f-4982-a0c8-04e415adfdae \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <api-access-token>" \
+    -d '{"osUniqueIdentifier": "<os-id>", "organizationId": "<org-id>", "pcapVersion": "<version>", "clientCertPem": "<cert-pem>", "clientCertFingerprint": "<fingerprint>", "interfaces": ["<interface-name>"], "interface_bpf_associations": {"lo": {"captures": {"8652061650958524491": {"bpf": "tcp port 3000", "deviceName": "lo", "snaplen": 65535}}}}}'

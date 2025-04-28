@@ -18,9 +18,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/danielhoward314/packet-sentry/middleware"
-	accountspb "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
-	authpb "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
-	orgspb "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
+	pbAccounts "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
+	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
+	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 )
 
 const (
@@ -56,21 +57,27 @@ func main() {
 	mux := runtime.NewServeMux()
 
 	logger.Info("registering accounts service on gateway mux")
-	err = accountspb.RegisterAccountsServiceHandler(ctx, mux, conn)
+	err = pbAccounts.RegisterAccountsServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the accounts service handler: %v", err)
 	}
 
 	logger.Info("registering auth service on gateway mux")
-	err = authpb.RegisterAuthServiceHandler(ctx, mux, conn)
+	err = pbAuth.RegisterAuthServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the auth service handler: %v", err)
 	}
 
 	logger.Info("registering organizations service on gateway mux")
-	err = orgspb.RegisterOrganizationsServiceHandler(ctx, mux, conn)
+	err = pbOrgs.RegisterOrganizationsServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the organizations service handler: %v", err)
+	}
+
+	logger.Info("registering devices service on gateway mux")
+	err = pbDevices.RegisterDevicesServiceHandler(ctx, mux, conn)
+	if err != nil {
+		log.Fatalf("failed to register the devices service handler: %v", err)
 	}
 
 	redisHost := os.Getenv("REDIS_HOST")

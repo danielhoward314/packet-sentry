@@ -9,6 +9,12 @@ import (
 
 	"github.com/danielhoward314/packet-sentry/dao"
 	"github.com/danielhoward314/packet-sentry/dao/postgres/queries"
+	"github.com/lib/pq"
+)
+
+const (
+	PredicateID                 = "id"
+	PredicateOSUniqueIdentifier = "os_unique_identifier"
 )
 
 type devices struct {
@@ -44,13 +50,24 @@ func (d *devices) Create(device *dao.Device) error {
 	).Scan(&device.ID)
 }
 
-func (d *devices) GetDeviceByOSUniqueIdentifier(osID string) (*dao.Device, error) {
-	if osID == "" {
-		return nil, errors.New("invalid os unique identifier")
+func (d *devices) GetDeviceByPredicate(predicateName, predicateValue string) (*dao.Device, error) {
+	if predicateName == "" {
+		return nil, errors.New("empty predicate name for where clause")
 	}
-	row := d.db.QueryRow(queries.DevicesSelectByOSUniqueIdentifier, osID)
+	if predicateValue == "" {
+		return nil, errors.New("empty predicate value for where clause")
+	}
+	var row *sql.Row
+	if predicateName == PredicateID {
+		row = d.db.QueryRow(queries.DevicesSelectById, predicateValue)
+	} else if predicateName == PredicateOSUniqueIdentifier {
+		row = d.db.QueryRow(queries.DevicesSelectByOSUniqueIdentifier, predicateValue)
+	} else {
+		return nil, errors.New("invalid predicate name for where clause")
+	}
 
 	var device dao.Device
+	var interfaces []string
 	var interfaceBPFJSON, previousBPFJSON []byte
 
 	err := row.Scan(
@@ -59,12 +76,16 @@ func (d *devices) GetDeviceByOSUniqueIdentifier(osID string) (*dao.Device, error
 		&device.ClientCertPEM,
 		&device.ClientCertFingerprint,
 		&device.OrganizationID,
+		&device.PCapVersion,
+		pq.Array(&interfaces),
 		&interfaceBPFJSON,
 		&previousBPFJSON,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	device.Interfaces = interfaces
 
 	// The BPF hash key is stored as a string in the database, but we need to convert it to uint64
 	device.InterfaceBPFAssociations, err = parseNestedJSONToUint64Map(interfaceBPFJSON)
@@ -77,26 +98,6 @@ func (d *devices) GetDeviceByOSUniqueIdentifier(osID string) (*dao.Device, error
 	}
 
 	return &device, nil
-}
-
-func parseNestedJSONToUint64Map(input []byte) (map[string]map[uint64]dao.BpfAssociation, error) {
-	var raw map[string]map[string]dao.BpfAssociation
-	if err := json.Unmarshal(input, &raw); err != nil {
-		return nil, err
-	}
-
-	result := make(map[string]map[uint64]dao.BpfAssociation)
-	for iface, filters := range raw {
-		result[iface] = make(map[uint64]dao.BpfAssociation)
-		for strKey, assoc := range filters {
-			uintKey, err := strconv.ParseUint(strKey, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse key '%s' as uint64: %w", strKey, err)
-			}
-			result[iface][uintKey] = assoc
-		}
-	}
-	return result, nil
 }
 
 func (d *devices) Update(device *dao.Device) error {
@@ -118,6 +119,10 @@ func (d *devices) Update(device *dao.Device) error {
 	if device.OrganizationID == "" {
 		return errors.New("invalid organization_id")
 	}
+	// ensure we will always set `interfaces` column to TEXT[]
+	if device.Interfaces == nil {
+		device.Interfaces = make([]string, 0)
+	}
 
 	var err error
 
@@ -125,18 +130,18 @@ func (d *devices) Update(device *dao.Device) error {
 	// which is the Go equivalent to the default '{}' for the jsonb columns
 	// if the update has associations, convert the uint64 keys to string
 	// which is how they're stored in the database
-	var interfaceBPFAssociations map[string]map[string]dao.BpfAssociation
+	var interfaceBPFAssociations map[string]map[string]dao.CaptureConfig
 	if device.InterfaceBPFAssociations == nil {
-		interfaceBPFAssociations = make(map[string]map[string]dao.BpfAssociation)
+		interfaceBPFAssociations = make(map[string]map[string]dao.CaptureConfig)
 	} else {
 		interfaceBPFAssociations, err = convertUint64MapToStringJSON(device.InterfaceBPFAssociations)
 		if err != nil {
 			return fmt.Errorf("converting interface_bpf_associations: %w", err)
 		}
 	}
-	var previousInterfaceBPFAssociations map[string]map[string]dao.BpfAssociation
+	var previousInterfaceBPFAssociations map[string]map[string]dao.CaptureConfig
 	if device.PreviousAssociations == nil {
-		previousInterfaceBPFAssociations = make(map[string]map[string]dao.BpfAssociation)
+		previousInterfaceBPFAssociations = make(map[string]map[string]dao.CaptureConfig)
 	} else {
 		previousInterfaceBPFAssociations, err = convertUint64MapToStringJSON(device.PreviousAssociations)
 		if err != nil {
@@ -157,6 +162,8 @@ func (d *devices) Update(device *dao.Device) error {
 		queries.DevicesUpdate,
 		device.ClientCertPEM,
 		device.ClientCertFingerprint,
+		device.PCapVersion,
+		pq.Array(device.Interfaces),
 		interfaceBPFJSON,
 		previousBPFJSON,
 		device.ID,
@@ -164,11 +171,80 @@ func (d *devices) Update(device *dao.Device) error {
 	return err
 }
 
-func convertUint64MapToStringJSON(input map[string]map[uint64]dao.BpfAssociation) (map[string]map[string]dao.BpfAssociation, error) {
-	result := make(map[string]map[string]dao.BpfAssociation)
+func (d *devices) List(organizationID string) ([]*dao.Device, error) {
+	if organizationID == "" {
+		return nil, fmt.Errorf("empty organization id")
+	}
+
+	var devices []*dao.Device
+	rows, rowsErr := d.db.Query(queries.DevicesSelectByOrganizationID, organizationID)
+	if rowsErr != nil {
+		return nil, rowsErr
+	}
+
+	for rows.Next() {
+		var device dao.Device
+		var interfaces []string
+		var interfaceBPFJSON, previousBPFJSON []byte
+
+		rowErr := rows.Scan(
+			&device.ID,
+			&device.OSUniqueIdentifier,
+			&device.ClientCertPEM,
+			&device.ClientCertFingerprint,
+			&device.OrganizationID,
+			&device.PCapVersion,
+			pq.Array(&interfaces),
+			&interfaceBPFJSON,
+			&previousBPFJSON,
+		)
+		if rowErr != nil {
+			return nil, rowErr
+		}
+
+		device.Interfaces = interfaces
+
+		// The BPF hash key is stored as a string in the database, but we need to convert it to uint64
+		device.InterfaceBPFAssociations, rowErr = parseNestedJSONToUint64Map(interfaceBPFJSON)
+		if rowErr != nil {
+			return nil, fmt.Errorf("parsing interface_bpf_associations: %w", rowErr)
+		}
+		device.PreviousAssociations, rowErr = parseNestedJSONToUint64Map(previousBPFJSON)
+		if rowErr != nil {
+			return nil, fmt.Errorf("parsing previous_associations: %w", rowErr)
+		}
+
+		devices = append(devices, &device)
+	}
+
+	return devices, nil
+}
+
+func parseNestedJSONToUint64Map(input []byte) (map[string]map[uint64]dao.CaptureConfig, error) {
+	var raw map[string]map[string]dao.CaptureConfig
+	if err := json.Unmarshal(input, &raw); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]map[uint64]dao.CaptureConfig)
+	for iface, filters := range raw {
+		result[iface] = make(map[uint64]dao.CaptureConfig)
+		for strKey, assoc := range filters {
+			uintKey, err := strconv.ParseUint(strKey, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse key '%s' as uint64: %w", strKey, err)
+			}
+			result[iface][uintKey] = assoc
+		}
+	}
+	return result, nil
+}
+
+func convertUint64MapToStringJSON(input map[string]map[uint64]dao.CaptureConfig) (map[string]map[string]dao.CaptureConfig, error) {
+	result := make(map[string]map[string]dao.CaptureConfig)
 
 	for iface, filters := range input {
-		result[iface] = make(map[string]dao.BpfAssociation)
+		result[iface] = make(map[string]dao.CaptureConfig)
 		for uintKey, assoc := range filters {
 			strKey := strconv.FormatUint(uintKey, 10)
 			result[iface][strKey] = assoc

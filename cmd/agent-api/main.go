@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
 	"github.com/danielhoward314/packet-sentry/cmd"
@@ -94,7 +95,32 @@ func main() {
 
 	datastore := psPostgres.NewDatastore(db, installKeySecret)
 
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL == "" {
+		natsURL = nats.DefaultURL
+	}
+	logger.Info("connecting to NATS", "NATS_URL", natsURL)
+
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer nc.Drain()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "COMMANDS",
+		Subjects: []string{"cmds.*"},
+	})
+	if err != nil && err != nats.ErrStreamNameAlreadyInUse {
+		log.Fatal(err)
+	}
+
 	bootstrapService := services.NewBootstrapService(
+		js,
 		datastore,
 		logger,
 		certs.CACert,
@@ -102,7 +128,7 @@ func main() {
 	)
 	pbBootstrap.RegisterBootstrapServiceServer(tlsServer, bootstrapService)
 
-	agentService := services.NewAgentService(datastore, logger)
+	agentService := services.NewAgentService(js, datastore, logger)
 	pbAgent.RegisterAgentServiceServer(mtlsServer, agentService)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -83,16 +83,18 @@ func (pm *pollManager) Start() {
 				continue
 			}
 
-			cmd, err := client.PollCommand(pm.ctx, &pbAgent.Empty{})
+			pbCmds, err := client.PollCommand(pm.ctx, &pbAgent.Empty{})
 			if err != nil {
 				logger.Error("failed to get command on poll", psLog.KeyError, err)
 			}
 
-			if cmd.Name != "noop" {
-				logger.Info("received command", psLog.KeyCommand, cmd.Name)
-				pm.commandsBroadcaster.Publish(&broadcast.Command{Name: cmd.Name})
-			} else {
-				logger.Info("received noop command, skipping publish")
+			for _, pbCmd := range pbCmds.Commands {
+				if pbCmd.Name != "noop" {
+					logger.Info("received command", psLog.KeyCommand, pbCmd.Name)
+					pm.commandsBroadcaster.Publish(&broadcast.Command{Name: pbCmd.Name})
+				} else {
+					logger.Info("received noop command, skipping publish")
+				}
 			}
 
 		case <-pm.ctx.Done():

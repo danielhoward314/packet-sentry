@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package devices;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/devices";
+
+import "google/api/annotations.proto";
+
+service DevicesService {
+    rpc Get(GetDeviceRequest) returns (GetDeviceResponse) {
+        option (google.api.http) = {
+            get: "/v1/devices/{id}"
+        };
+    }
+    rpc List(ListDevicesRequest) returns (ListDevicesResponse) {
+        option (google.api.http) = {
+            get: "/v1/devices"
+        };
+    }
+    rpc Update (UpdateDeviceRequest) returns (Empty) {
+        option (google.api.http) = {
+            put: "/v1/devices/{id}"
+            body: "*"
+        };
+    }
+}
+
+message Empty {}
+
+message GetDeviceRequest {
+    string id = 1;
+}
+
+message ListDevicesRequest {
+    string organization_id = 1;
+}
+
+message UpdateDeviceRequest {
+    string id = 1;
+    string organization_id = 2;
+    string pcap_version = 3;
+    repeated string interfaces = 4;
+    string os_unique_identifier = 5;
+    string client_cert_pem = 6;
+    string client_cert_fingerprint = 7;
+    map<string, InterfaceCaptureMap> interface_bpf_associations = 8;
+    map<string, InterfaceCaptureMap> previous_associations = 9;
+}
+
+message CaptureConfig {
+    string bpf = 1;
+    string deviceName = 2;
+    bool promiscuous = 3;
+    int32 snapLen = 4;
+    int64 timeout = 5;
+}
+
+message InterfaceCaptureMap {
+    map<uint64, CaptureConfig> captures = 1;
+}
+
+message GetDeviceResponse {
+    string id = 1;
+    string organization_id = 2;
+    string os_unique_identifier = 3;
+    string client_cert_pem = 4;
+    string client_cert_fingerprint = 5;
+    map<string, InterfaceCaptureMap> interface_bpf_associations = 6;
+    map<string, InterfaceCaptureMap> previous_associations = 7;
+}
+
+message ListDevicesResponse {
+    repeated GetDeviceResponse devices = 1;
+}
