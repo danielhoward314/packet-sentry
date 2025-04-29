@@ -423,11 +423,15 @@ func (x *InterfaceCaptureMap) GetCaptures() map[uint64]*CaptureConfig {
 
 type PacketEvent struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	CaptureLength  uint32                 `protobuf:"varint,1,opt,name=capture_length,json=captureLength,proto3" json:"capture_length,omitempty"`
-	OriginalLength uint32                 `protobuf:"varint,2,opt,name=original_length,json=originalLength,proto3" json:"original_length,omitempty"`
-	InterfaceIndex int32                  `protobuf:"varint,3,opt,name=interface_index,json=interfaceIndex,proto3" json:"interface_index,omitempty"`
-	Truncated      bool                   `protobuf:"varint,4,opt,name=truncated,proto3" json:"truncated,omitempty"`
-	Layers         *Layers                `protobuf:"bytes,5,opt,name=layers,proto3" json:"layers,omitempty"`
+	Bpf            string                 `protobuf:"bytes,1,opt,name=bpf,proto3" json:"bpf,omitempty"`
+	DeviceName     string                 `protobuf:"bytes,2,opt,name=deviceName,proto3" json:"deviceName,omitempty"`
+	Promiscuous    bool                   `protobuf:"varint,3,opt,name=promiscuous,proto3" json:"promiscuous,omitempty"`
+	SnapLen        int32                  `protobuf:"varint,4,opt,name=snapLen,proto3" json:"snapLen,omitempty"`
+	CaptureLength  uint32                 `protobuf:"varint,5,opt,name=capture_length,json=captureLength,proto3" json:"capture_length,omitempty"`
+	OriginalLength uint32                 `protobuf:"varint,6,opt,name=original_length,json=originalLength,proto3" json:"original_length,omitempty"`
+	InterfaceIndex int32                  `protobuf:"varint,7,opt,name=interface_index,json=interfaceIndex,proto3" json:"interface_index,omitempty"`
+	Truncated      bool                   `protobuf:"varint,8,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	Layers         *Layers                `protobuf:"bytes,9,opt,name=layers,proto3" json:"layers,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -460,6 +464,34 @@ func (x *PacketEvent) ProtoReflect() protoreflect.Message {
 // Deprecated: Use PacketEvent.ProtoReflect.Descriptor instead.
 func (*PacketEvent) Descriptor() ([]byte, []int) {
 	return file_agent_agent_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PacketEvent) GetBpf() string {
+	if x != nil {
+		return x.Bpf
+	}
+	return ""
+}
+
+func (x *PacketEvent) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *PacketEvent) GetPromiscuous() bool {
+	if x != nil {
+		return x.Promiscuous
+	}
+	return false
+}
+
+func (x *PacketEvent) GetSnapLen() int32 {
+	if x != nil {
+		return x.SnapLen
+	}
+	return 0
 }
 
 func (x *PacketEvent) GetCaptureLength() uint32 {
@@ -979,13 +1011,19 @@ const file_agent_agent_proto_rawDesc = "" +
 	"\bcaptures\x18\x01 \x03(\v2(.agent.InterfaceCaptureMap.CapturesEntryR\bcaptures\x1aQ\n" +
 	"\rCapturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x04R\x03key\x12*\n" +
-	"\x05value\x18\x02 \x01(\v2\x14.agent.CaptureConfigR\x05value:\x028\x01\"\xcb\x01\n" +
-	"\vPacketEvent\x12%\n" +
-	"\x0ecapture_length\x18\x01 \x01(\rR\rcaptureLength\x12'\n" +
-	"\x0foriginal_length\x18\x02 \x01(\rR\x0eoriginalLength\x12'\n" +
-	"\x0finterface_index\x18\x03 \x01(\x05R\x0einterfaceIndex\x12\x1c\n" +
-	"\ttruncated\x18\x04 \x01(\bR\ttruncated\x12%\n" +
-	"\x06layers\x18\x05 \x01(\v2\r.agent.LayersR\x06layers\"\xbd\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x14.agent.CaptureConfigR\x05value:\x028\x01\"\xb9\x02\n" +
+	"\vPacketEvent\x12\x10\n" +
+	"\x03bpf\x18\x01 \x01(\tR\x03bpf\x12\x1e\n" +
+	"\n" +
+	"deviceName\x18\x02 \x01(\tR\n" +
+	"deviceName\x12 \n" +
+	"\vpromiscuous\x18\x03 \x01(\bR\vpromiscuous\x12\x18\n" +
+	"\asnapLen\x18\x04 \x01(\x05R\asnapLen\x12%\n" +
+	"\x0ecapture_length\x18\x05 \x01(\rR\rcaptureLength\x12'\n" +
+	"\x0foriginal_length\x18\x06 \x01(\rR\x0eoriginalLength\x12'\n" +
+	"\x0finterface_index\x18\a \x01(\x05R\x0einterfaceIndex\x12\x1c\n" +
+	"\ttruncated\x18\b \x01(\bR\ttruncated\x12%\n" +
+	"\x06layers\x18\t \x01(\v2\r.agent.LayersR\x06layers\"\xbd\x01\n" +
 	"\x06Layers\x12)\n" +
 	"\bip_layer\x18\x01 \x01(\v2\x0e.agent.IPLayerR\aipLayer\x12,\n" +
 	"\ttcp_layer\x18\x02 \x01(\v2\x0f.agent.TCPLayerR\btcpLayer\x12,\n" +

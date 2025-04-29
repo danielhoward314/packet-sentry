@@ -37,10 +37,6 @@ type ReportInterfacesRequest struct {
 	PCapVersion string              `json:"pcapVersion"`
 }
 
-type PacketEvent struct {
-	Data string `json:"data"`
-}
-
 type BPFResponse struct {
 	Create map[string]map[uint64]*CaptureConfig `json:"create"`
 	Update map[string]map[uint64]*CaptureConfig `json:"update"`

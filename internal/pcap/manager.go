@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 
 	"github.com/danielhoward314/packet-sentry/internal/broadcast"
@@ -39,7 +38,7 @@ type pcapManager struct {
 	interfaces                     map[string]*pcap.Interface
 	logger                         *slog.Logger
 	mu                             sync.Mutex
-	packetChan                     chan gopacket.Packet
+	packetChan                     chan WrappedPacket
 	packetStreamClient             pbAgent.AgentService_SendPacketEventClient
 	pcapVersion                    string
 	stopOnce                       sync.Once
@@ -65,7 +64,7 @@ func NewPCapManager(
 		ifaceNameToFiltersAssociations: make(map[string]map[uint64]*packetCapture),
 		interfaces:                     make(map[string]*pcap.Interface),
 		logger:                         childLogger,
-		packetChan:                     make(chan gopacket.Packet, 500),
+		packetChan:                     make(chan WrappedPacket, 500),
 	}
 }
 
@@ -433,14 +432,19 @@ func (m *pcapManager) enforceConfig(bpfConfig *pbAgent.BPFConfig) error {
 	return nil
 }
 
-func (m *pcapManager) sendPacketEvent(pkt gopacket.Packet) error {
+func (m *pcapManager) sendPacketEvent(wrappedPkt WrappedPacket) error {
 	logger := m.logger.With(psLog.KeyFunction, "PCapManager.sendPacketEvent")
+
+	pkt := wrappedPkt.PacketEventData
+	if pkt == nil {
+		return fmt.Errorf("no packet event data in wrapped packet")
+	}
 
 	if err := pkt.ErrorLayer(); err != nil {
 		logger.Error("failed to decode packet", psLog.KeyError, err)
 	}
 
-	packetEvent := ConvertPacketToEvent(pkt)
+	packetEvent := ConvertPacketToEvent(wrappedPkt)
 
 	m.streamMu.Lock()
 	defer m.streamMu.Unlock()

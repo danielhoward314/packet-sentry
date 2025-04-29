@@ -18,11 +18,20 @@ type packetCapture struct {
 	ctx        context.Context
 	handle     *pcap.Handle
 	logger     *slog.Logger
-	packetOut  chan<- gopacket.Packet
+	packetOut  chan<- WrappedPacket
 	wg         *sync.WaitGroup
 }
 
-func newPacketCapture(parentCtx context.Context, parentLogger *slog.Logger, config *CaptureConfig, wg *sync.WaitGroup, packetOut chan<- gopacket.Packet) (*packetCapture, error) {
+type WrappedPacket struct {
+	Bpf               string
+	DeviceName        string
+	OSUniqueIdentifer string
+	Promiscuous       bool
+	SnapLen           int32
+	PacketEventData   gopacket.Packet
+}
+
+func newPacketCapture(parentCtx context.Context, parentLogger *slog.Logger, config *CaptureConfig, wg *sync.WaitGroup, packetOut chan<- WrappedPacket) (*packetCapture, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	childLogger := parentLogger.With(psLog.KeyCaptureConfig, config)
 
@@ -80,12 +89,20 @@ func (pc *packetCapture) Start() error {
 					return
 				}
 
+				wrapped := WrappedPacket{
+					Bpf:             pc.config.BPF,
+					DeviceName:      pc.config.DeviceName,
+					Promiscuous:     pc.config.Promiscuous,
+					SnapLen:         pc.config.SnapLen,
+					PacketEventData: packet,
+				}
+
 				// nested select for handling buffered channel backpressure
 				// send does not block on a buffered channel until it's full
 				// a nested select here falls into the default case when the channel is full
 				// so we can keep processing
 				select {
-				case pc.packetOut <- packet:
+				case pc.packetOut <- wrapped:
 				default:
 					// TODO: replace with a dropped packet log that gets sent, then wiped, on a 24-hour interval
 					logger.Warn("packet channel full, dropping packet", psLog.KeyDroppedPacket, packet.String())

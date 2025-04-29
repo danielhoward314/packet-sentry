@@ -13,8 +13,8 @@ import (
 // dropDBCmd is a subcommand to drop a database
 var dropDBCmd = &cobra.Command{
 	Use:   "db",
-	Short: "Runs `DROP DATABASE <name>;` where <name> is sourced from env var POSTGRES_APPLICATION_DATABASE.",
-	Long:  "Runs `DROP DATABASE <name>;` where <name> is sourced from env var POSTGRES_APPLICATION_DATABASE.",
+	Short: "Drops both the application and timescaledb databases.",
+	Long:  "Drops the databases sourced from POSTGRES_APPLICATION_DATABASE and TSDB_DATABASE environment variables.",
 	Run:   dropDB,
 }
 
@@ -46,13 +46,25 @@ func dropDB(cobraCmd *cobra.Command, args []string) {
 	if applicationDB == "" {
 		log.Fatal("Error dropping database: empty application database name")
 	}
-	createDBSQL := fmt.Sprintf("DROP DATABASE %s", applicationDB)
-	_, err = db.Exec(createDBSQL)
+
+	dropAppDBSQL := fmt.Sprintf("DROP DATABASE IF EXISTS %s;", pqQuoteIdentifier(applicationDB))
+	_, err = db.Exec(dropAppDBSQL)
 	if err != nil {
-		log.Fatal("Error dropping database:", err)
+		log.Fatal("Error dropping application database:", err)
+	}
+	fmt.Printf("Database %s dropped successfully.\n", applicationDB)
+
+	tsdbDatabase := os.Getenv("TSDB_DATABASE")
+	if tsdbDatabase == "" {
+		log.Fatal("Error dropping TimescaleDB database: empty TSDB_DATABASE name")
 	}
 
-	fmt.Printf("Database %s dropped successfully.\n", applicationDB)
+	dropTSDBSQL := fmt.Sprintf("DROP DATABASE IF EXISTS %s;", pqQuoteIdentifier(tsdbDatabase))
+	_, err = db.Exec(dropTSDBSQL)
+	if err != nil {
+		log.Fatal("Error dropping TimescaleDB database:", err)
+	}
+	fmt.Printf("TimescaleDB database %s dropped successfully.\n", tsdbDatabase)
 }
 
 func init() {

@@ -17,18 +17,31 @@ var createMigrationCmd = &cobra.Command{
 }
 
 func createMigration(cobraCmd *cobra.Command, args []string) {
+	// Ensure the user provided a name for the migration
 	if len(args) != 1 {
 		log.Fatal("must provide name for migration file")
 	}
 	migrationName := args[0]
 
-	goose.SetBaseFS(embedMigrations)
-	err := goose.Create(nil, "./migrations", migrationName, "sql")
+	isTimescale, _ := cobraCmd.Flags().GetBool("timescale")
+
+	embeddedPath := ""
+	if isTimescale {
+		goose.SetBaseFS(embedTimescaleMigrations)
+		embeddedPath = embeddedTimescaleMigrationsPath
+	} else {
+		goose.SetBaseFS(embedMigrations)
+		embeddedPath = embeddedMigrationsPath
+	}
+
+	err := goose.Create(nil, embeddedPath, migrationName, "sql")
 	if err != nil {
 		log.Fatalf("Error creating migration file: %s", err.Error())
 	}
 }
 
 func init() {
+	createMigrationCmd.Flags().Bool("timescale", false, "Create migration for TimescaleDB (use a separate migration path)")
+
 	createCmd.AddCommand(createMigrationCmd)
 }

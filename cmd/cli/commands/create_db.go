@@ -13,8 +13,8 @@ import (
 // createDBCmd is a subcommand to create a database
 var createDBCmd = &cobra.Command{
 	Use:   "db",
-	Short: "Runs `CREATE DATABASE <name>;` where <name> is sourced from env var POSTGRES_APPLICATION_DATABASE.",
-	Long:  "Runs `CREATE DATABASE <name>;` where <name> is sourced from env var POSTGRES_APPLICATION_DATABASE.",
+	Short: "Runs `CREATE DATABASE <name>;` with TEMPLATE template0 for clean collation. Also creates TimescaleDB database and extension.",
+	Long:  "Runs `CREATE DATABASE <name> TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C' ENCODING 'UTF8';` for both the app database and the TimescaleDB database.",
 	Run:   createDB,
 }
 
@@ -46,15 +46,49 @@ func createDB(cobraCmd *cobra.Command, args []string) {
 	if applicationDB == "" {
 		log.Fatal("Error creating database: empty application database name")
 	}
-	createDBSQL := fmt.Sprintf("CREATE DATABASE %s", applicationDB)
-	_, err = db.Exec(createDBSQL)
+
+	createAppDBSQL := fmt.Sprintf(`
+		CREATE DATABASE %s
+		WITH
+		  TEMPLATE template0
+		  ENCODING 'UTF8'
+		  LC_COLLATE 'C'
+		  LC_CTYPE 'C';
+	`, pqQuoteIdentifier(applicationDB))
+
+	_, err = db.Exec(createAppDBSQL)
 	if err != nil {
-		log.Fatal("Error creating database:", err)
+		log.Fatal("Error creating application database:", err)
+	}
+	fmt.Printf("Database %s created successfully.\n", applicationDB)
+
+	// Create TimescaleDB Database
+	tsdbName := os.Getenv("TSDB_DATABASE")
+	if tsdbName == "" {
+		log.Fatal("Error creating TimescaleDB database: empty TSDB_DATABASE name")
 	}
 
-	fmt.Printf("Database %s created successfully.\n", applicationDB)
+	createTSDBSQL := fmt.Sprintf(`
+		CREATE DATABASE %s
+		WITH
+		  TEMPLATE template0
+		  ENCODING 'UTF8'
+		  LC_COLLATE 'C'
+		  LC_CTYPE 'C';
+	`, pqQuoteIdentifier(tsdbName))
+
+	_, err = db.Exec(createTSDBSQL)
+	if err != nil {
+		log.Fatal("Error creating TimescaleDB database:", err)
+	}
+	fmt.Printf("TimescaleDB database %s created successfully.\n", tsdbName)
 }
 
 func init() {
 	createCmd.AddCommand(createDBCmd)
+}
+
+// pqQuoteIdentifier safely quotes database identifiers (like db names)
+func pqQuoteIdentifier(identifier string) string {
+	return `"` + identifier + `"`
 }

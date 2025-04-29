@@ -24,17 +24,40 @@ func migrateDown(cobraCmd *cobra.Command, args []string) {
 	password := os.Getenv("POSTGRES_PASSWORD")
 	sslMode := os.Getenv("POSTGRES_SSLMODE")
 	user := os.Getenv("POSTGRES_USER")
-	applicationDB := os.Getenv("POSTGRES_APPLICATION_DATABASE")
 
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host,
-		port,
-		user,
-		password,
-		applicationDB,
-		sslMode,
-	)
+	isTimescale, _ := cobraCmd.Flags().GetBool("timescale")
+
+	applicationDB := ""
+	connStr := ""
+	migrationsDir := ""
+
+	if isTimescale {
+		goose.SetBaseFS(embedTimescaleMigrations)
+		applicationDB = os.Getenv("TSDB_DATABASE")
+		connStr = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			host,
+			port,
+			user,
+			password,
+			applicationDB,
+			sslMode,
+		)
+		migrationsDir = dirMigrationsTimescale
+	} else {
+		goose.SetBaseFS(embedMigrations)
+		applicationDB = os.Getenv("POSTGRES_APPLICATION_DATABASE")
+		connStr = fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			host,
+			port,
+			user,
+			password,
+			applicationDB,
+			sslMode,
+		)
+		migrationsDir = dirMigrations
+	}
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -42,17 +65,16 @@ func migrateDown(cobraCmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
-	goose.SetBaseFS(embedMigrations)
-
 	if err := goose.SetDialect("postgres"); err != nil {
 		panic(err)
 	}
 
-	if err := goose.Down(db, "migrations"); err != nil {
+	if err := goose.Down(db, migrationsDir); err != nil {
 		panic(err)
 	}
 }
 
 func init() {
+	migrateDownCmd.Flags().Bool("timescale", false, "Invokes `goose down migrations_timescale` to roll back the timescale db migrations.")
 	migrateCmd.AddCommand(migrateDownCmd)
 }

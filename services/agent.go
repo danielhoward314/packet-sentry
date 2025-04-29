@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/danielhoward314/packet-sentry/dao"
 	"github.com/danielhoward314/packet-sentry/dao/postgres"
@@ -167,6 +168,13 @@ func (as *agentService) GetBPFConfig(ctx context.Context, req *pbAgent.Empty) (*
 func (as *agentService) SendPacketEvent(stream pbAgent.AgentService_SendPacketEventServer) error {
 	logger := as.logger.With(psLog.KeyFunction, "agentService.SendPacketEvent")
 
+	ctx := stream.Context()
+
+	osUniqueIdentifier, err := as.getSubjectCNFromClientCert(ctx)
+	if err != nil {
+		return status.Error(codes.Unauthenticated, err.Error())
+	}
+
 	for {
 		packet, err := stream.Recv()
 		if err != nil {
@@ -182,26 +190,16 @@ func (as *agentService) SendPacketEvent(stream pbAgent.AgentService_SendPacketEv
 			return err
 		}
 
-		layers := packet.Layers
-		if layers != nil {
-			if layers.IpLayer != nil {
-				ipLayer := layers.IpLayer
-				logger.Info(fmt.Sprintf("IP src %s for dst %s", ipLayer.SrcIp, ipLayer.DstIp))
-			}
-			if layers.TcpLayer != nil {
-				tcpLayer := layers.TcpLayer
-				logger.Info(fmt.Sprintf("TCP src port %d for dst port %d", tcpLayer.SrcPort, tcpLayer.DstPort))
-			}
-			if layers.TlsLayer != nil {
-				tlsLayer := layers.TlsLayer
-				for _, record := range tlsLayer.Records {
-					logger.Info(fmt.Sprintf("tls record type %s", record.Type))
-				}
-			}
-			if layers.UdpLayer != nil {
-				udpLayer := layers.UdpLayer
-				logger.Info(fmt.Sprintf("upd src port %d for dst port %d", udpLayer.SrcPort, udpLayer.DstPort))
-			}
+		data, err := proto.Marshal(packet)
+		if err != nil {
+			logger.Error("error marshaling packet event data in protobuf bytes", "error", err)
+			return err
+		}
+
+		_, err = as.jetStream.Publish("events."+osUniqueIdentifier, data)
+		if err != nil {
+			logger.Error("error publishing packet event to NATS", "error", err)
+			return err
 		}
 	}
 }

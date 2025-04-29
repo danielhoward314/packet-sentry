@@ -1,15 +1,19 @@
 package pcap
 
 import (
-	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
 	pbAgent "github.com/danielhoward314/packet-sentry/protogen/golang/agent"
 )
 
-func ConvertPacketToEvent(pkt gopacket.Packet) *pbAgent.PacketEvent {
+func ConvertPacketToEvent(wrappedPkt WrappedPacket) *pbAgent.PacketEvent {
+	pkt := wrappedPkt.PacketEventData
 	metadata := pkt.Metadata()
 	event := &pbAgent.PacketEvent{
+		Bpf:            wrappedPkt.Bpf,
+		DeviceName:     wrappedPkt.DeviceName,
+		Promiscuous:    wrappedPkt.Promiscuous,
+		SnapLen:        wrappedPkt.SnapLen,
 		CaptureLength:  uint32(metadata.CaptureLength),
 		OriginalLength: uint32(metadata.Length),
 		InterfaceIndex: int32(metadata.InterfaceIndex),

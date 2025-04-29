@@ -52,12 +52,15 @@ message InterfaceCaptureMap {
 }
 
 message PacketEvent {
-  uint32 capture_length = 1;
-  uint32 original_length = 2;
-  int32 interface_index = 3;
-  bool truncated = 4;
-
-  Layers layers = 5;
+  string bpf = 1;
+  string deviceName = 2;
+  bool promiscuous = 3;
+  int32 snapLen = 4;
+  uint32 capture_length = 5;
+  uint32 original_length = 6;
+  int32 interface_index = 7;
+  bool truncated = 8;
+  Layers layers = 9;
 }
 
 message Layers {

@@ -43,6 +43,7 @@ Initialize the database:
 docker compose up -d postgres
 docker compose run --rm cli create db
 docker compose run --rm cli migrate up
+docker compose run --rm cli migrate up --timescale
 ```
 
 Run the built containers:

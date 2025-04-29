@@ -174,7 +174,7 @@ This API should persist an install key associated with this administrator and re
 
 curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/devices/<device-id> \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemF0aW9uX3JvbGUiOiJQUklNQVJZX0FETUlOIiwib3JnYW5pemF0aW9uX2lkIjoiZDkzZWU3ODEtMWI0Yi00MDFkLWI5NTktYzk4ZDM2ZWNhNjQ4IiwiaXNzIjoid2ViLWFwaS5wYWNrZXQtc2VudHJ5Iiwic3ViIjoiMWFiMTkzNzktZWIxNC00NTc0LTg2N2EtN2FmNTRkNWQ1MWZhIiwiYXVkIjpbInBhY2tldC1zZW50cnktYXBpIl0sImV4cCI6MTc0NTgwMDY5MywiaWF0IjoxNzQ1Nzk5NzkzLCJqdGkiOiIwYmRhMWY1MS1jMjY1LTRkZjUtOGYyMy1kZTBhM2E2YTgzZjQifQ.TcJC4tUpoymZAv4X0SGi9seVpePjAz8msD2DJ7VEJO4"
+    -H "Authorization: Bearer <api-access-token>"
 
 ### GET /v1/devices
 

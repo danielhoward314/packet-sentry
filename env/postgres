@@ -5,3 +5,4 @@ POSTGRES_SSLMODE=disable
 POSTGRES_MAIN_DATABASE=postgres
 POSTGRES_APPLICATION_DATABASE=packet_sentry
 POSTGRES_USER=postgres
+TSDB_DATABASE=packet_sentry_timescale

@@ -25,6 +25,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /packet-sentry-gateway
 # Build the web-api binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /packet-sentry-web-api ./cmd/web-api/main.go
 
+# Build the worker binary
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /packet-sentry-worker ./cmd/worker/main.go
+
 ############################################
 # agent-api
 ############################################
@@ -68,3 +71,11 @@ COPY --from=gobase /certs/web_api_server.key.pem /certs/web_api_server.key.pem
 COPY --from=gobase /templates /templates
 EXPOSE 50051
 CMD ["/bin/web-api"]
+
+############################################
+# worker
+############################################
+FROM scratch AS worker
+COPY --from=gobase /packet-sentry-worker /bin/worker
+EXPOSE 3001
+CMD ["/bin/worker"]
