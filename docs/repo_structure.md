@@ -10,8 +10,8 @@ The `cmd` directory contains several Go binaries:
 6. The installer actions `cmd/installeractions` are used by the WiX-based MSI as custom actions for the Windows agent installer.
 
 
-The `packet-sentry-spa` directory contains the Vue SPA for the Packet Sentry UI. This SPA was bootstrapped with the following:
+The `packet-sentry-web-console` directory contains the Vue SPA for the Packet Sentry UI. This SPA was bootstrapped with the following:
 
 ```
-pnpm create vite packet-sentry-spa --template vue-ts
+pnpm create vite packet-sentry-web-console --template vue-ts
 ```

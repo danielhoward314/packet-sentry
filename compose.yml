@@ -93,7 +93,7 @@ services:
   web-console:
     container_name: packet-sentry-web-console
     build:
-      context: ./packet-sentry-spa
+      context: ./packet-sentry-web-console
       dockerfile: Dockerfile
     ports:
       - "80:80"

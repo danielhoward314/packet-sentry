@@ -4,7 +4,7 @@
 The Vue SPA uses [tailwindcss](https://tailwindcss.com/docs/installation) for its styling. To install and configure it initially, I did the following:
 
 ```
-cd packet-sentry-spa
+cd packet-sentry-web-console
 npm install -D tailwindcss
 npx tailwindcss init
 touch ./src/tailwind-input.css ./src/assets/tailwind-output.css
