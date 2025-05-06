@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,15 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -25,91 +25,91 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
+} from "@/components/ui/form";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { z, ZodTypeAny } from 'zod'
-import { CircleHelp } from 'lucide-react'
+} from "@/components/ui/tooltip";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z, ZodTypeAny } from "zod";
+import { CircleHelp } from "lucide-react";
 
 type BillingPlanField = {
-  type: 'select'
-  label: string
-  id: string
-  options: { value: string; label: string }[]
-  default: string
-}
+  type: "select";
+  label: string;
+  id: string;
+  options: { value: string; label: string }[];
+  default: string;
+};
 
 type PrimaryAdminField = {
-  type: 'email'
-  label: string
-  id: string
-}
+  type: "email";
+  label: string;
+  id: string;
+};
 
 type CreditCardField =
-  | { type: 'text'; label: string; id: string; options: [] }
-  | { type: 'creditCardNumber'; label: string; id: string; options: [] }
-  | { type: 'cvc'; label: string; id: string; options: [] }
+  | { type: "text"; label: string; id: string; options: [] }
+  | { type: "creditCardNumber"; label: string; id: string; options: [] }
+  | { type: "cvc"; label: string; id: string; options: [] }
   | {
-      type: 'select'
-      label: string
-      id: string
-      options: { value: string; label: string }[]
-    }
+      type: "select";
+      label: string;
+      id: string;
+      options: { value: string; label: string }[];
+    };
 interface BillingDetailsProps
-  extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
-  onSubmit?: (formName: string, formData: FormData) => void | Promise<void>
+  extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+  onSubmit?: (formName: string, formData: FormData) => void | Promise<void>;
 }
 
 function buildBillingPlanSchema() {
-  const shape: Record<string, ZodTypeAny> = {}
-  shape['billingPlan'] = z.enum(
-    ['10-99-month', '50-399-month', '100-799-month'],
+  const shape: Record<string, ZodTypeAny> = {};
+  shape["billingPlan"] = z.enum(
+    ["10-99-month", "50-399-month", "100-799-month"],
     {
-      required_error: 'Please select a billing plan.',
-    }
-  )
+      required_error: "Please select a billing plan.",
+    },
+  );
 
-  return z.object(shape)
+  return z.object(shape);
 }
 
 function buildPrimaryAdminSchema() {
-  const shape: Record<string, ZodTypeAny> = {}
-  shape['primaryAdminEmail'] = z.string().email()
-  return z.object(shape)
+  const shape: Record<string, ZodTypeAny> = {};
+  shape["primaryAdminEmail"] = z.string().email();
+  return z.object(shape);
 }
 
 function buildCreditCardSchema(fields: CreditCardField[]) {
-  const shape: Record<string, ZodTypeAny> = {}
+  const shape: Record<string, ZodTypeAny> = {};
 
   for (const field of fields) {
-    let schema = z.string().min(1, { message: `${field.label} is required.` })
+    let schema = z.string().min(1, { message: `${field.label} is required.` });
 
-    if (field.type === 'creditCardNumber') {
+    if (field.type === "creditCardNumber") {
       schema = schema.regex(/^\d{13,19}$/, {
-        message: 'Invalid credit card number.',
-      })
+        message: "Invalid credit card number.",
+      });
     }
 
-    if (field.type === 'cvc') {
-      schema = schema.regex(/^\d{3,4}$/, { message: 'Invalid CVC code.' })
+    if (field.type === "cvc") {
+      schema = schema.regex(/^\d{3,4}$/, { message: "Invalid CVC code." });
     }
 
-    shape[field.id] = schema
+    shape[field.id] = schema;
   }
 
   // Return object schema with joint expiration date validation
   return z.object(shape).superRefine((data, ctx) => {
-    const month = parseInt(data.expirationMonth, 10)
-    const year = parseInt(data.expirationYear, 10)
-    const now = new Date()
-    const currentMonth = now.getMonth() + 1
-    const currentYear = now.getFullYear()
+    const month = parseInt(data.expirationMonth, 10);
+    const year = parseInt(data.expirationYear, 10);
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
 
     if (
       isNaN(month) ||
@@ -119,136 +119,136 @@ function buildCreditCardSchema(fields: CreditCardField[]) {
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Expiration date must be in the future.',
-        path: ['expirationMonth'],
-      })
+        message: "Expiration date must be in the future.",
+        path: ["expirationMonth"],
+      });
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Expiration date must be in the future.',
-        path: ['expirationYear'],
-      })
+        message: "Expiration date must be in the future.",
+        path: ["expirationYear"],
+      });
     }
-  })
+  });
 }
 
 export function BillingDetails({ onSubmit }: BillingDetailsProps) {
   const billingPlanField: BillingPlanField = {
-    type: 'select',
-    label: 'Billing Plan',
-    id: 'billingPlan',
+    type: "select",
+    label: "Billing Plan",
+    id: "billingPlan",
     options: [
-      { value: '10-99-month', label: '10 Devices at $99/month' },
-      { value: '50-399-month', label: '50 Devices at $399/month' },
-      { value: '100-799-month', label: '100 Devices at $799/month' },
+      { value: "10-99-month", label: "10 Devices at $99/month" },
+      { value: "50-399-month", label: "50 Devices at $399/month" },
+      { value: "100-799-month", label: "100 Devices at $799/month" },
     ],
-    default: '10-99-month',
-  }
+    default: "10-99-month",
+  };
   const primaryAdminField: PrimaryAdminField = {
-    type: 'email',
-    label: 'Primary Admin Email',
-    id: 'primaryAdminEmail',
-  }
+    type: "email",
+    label: "Primary Admin Email",
+    id: "primaryAdminEmail",
+  };
   const creditCardFields: CreditCardField[] = [
-    { type: 'text', label: 'Name on Card', id: 'cardHolderName', options: [] },
+    { type: "text", label: "Name on Card", id: "cardHolderName", options: [] },
     {
-      type: 'creditCardNumber',
-      label: 'Card Number',
-      id: 'cardNumber',
+      type: "creditCardNumber",
+      label: "Card Number",
+      id: "cardNumber",
       options: [],
     },
-    { type: 'cvc', label: 'CVC', id: 'cvc', options: [] },
+    { type: "cvc", label: "CVC", id: "cvc", options: [] },
     {
-      type: 'select',
-      label: 'Expiration Month',
-      id: 'expirationMonth',
+      type: "select",
+      label: "Expiration Month",
+      id: "expirationMonth",
       options: Array.from({ length: 12 }, (_, i) => ({
-        value: String(i + 1).padStart(2, '0'),
-        label: String(i + 1).padStart(2, '0'),
+        value: String(i + 1).padStart(2, "0"),
+        label: String(i + 1).padStart(2, "0"),
       })),
     },
     {
-      type: 'select',
-      label: 'Expiration Year',
-      id: 'expirationYear',
+      type: "select",
+      label: "Expiration Year",
+      id: "expirationYear",
       options: Array.from({ length: 10 }, (_, i) => {
-        const year = new Date().getFullYear() + i
-        return { value: String(year), label: String(year) }
+        const year = new Date().getFullYear() + i;
+        return { value: String(year), label: String(year) };
       }),
     },
-  ]
+  ];
 
-  const [error, setError] = useState<string | null>(null)
-  const [openPrimaryAdminDialog, setOpenPrimaryAdminDialog] = useState(false)
-  const [openBillingPlanDialog, setOpenBillingPlanDialog] = useState(false)
-  const [openPaymentMethodDialog, setOpenPaymentMethodDialog] = useState(false)
-  const billingFormSchema = buildBillingPlanSchema()
-  const primaryAdminFormSchema = buildPrimaryAdminSchema()
-  const creditCardFormSchema = buildCreditCardSchema(creditCardFields)
+  const [error, setError] = useState<string | null>(null);
+  const [openPrimaryAdminDialog, setOpenPrimaryAdminDialog] = useState(false);
+  const [openBillingPlanDialog, setOpenBillingPlanDialog] = useState(false);
+  const [openPaymentMethodDialog, setOpenPaymentMethodDialog] = useState(false);
+  const billingFormSchema = buildBillingPlanSchema();
+  const primaryAdminFormSchema = buildPrimaryAdminSchema();
+  const creditCardFormSchema = buildCreditCardSchema(creditCardFields);
 
   const billingForm = useForm<z.infer<typeof billingFormSchema>>({
     resolver: zodResolver(billingFormSchema),
     defaultValues: {
-      billingPlan: '10-99-month',
+      billingPlan: "10-99-month",
     },
-  })
+  });
 
   const primaryAdminForm = useForm<z.infer<typeof primaryAdminFormSchema>>({
     resolver: zodResolver(primaryAdminFormSchema),
     defaultValues: {
-      primaryAdminEmail: '',
+      primaryAdminEmail: "",
     },
-  })
+  });
 
   const creditCardForm = useForm<z.infer<typeof creditCardFormSchema>>({
     resolver: zodResolver(creditCardFormSchema),
     defaultValues: {
-      ...Object.fromEntries(creditCardFields.map(f => [f.id, ''])),
+      ...Object.fromEntries(creditCardFields.map((f) => [f.id, ""])),
     },
-  })
+  });
 
   const handleBillingFormSave = (values: z.infer<typeof billingFormSchema>) => {
-    const formData = new FormData()
+    const formData = new FormData();
     for (const key in values) {
-      console.log(key, values[key])
-      formData.append(key, values[key])
+      console.log(key, values[key]);
+      formData.append(key, values[key]);
     }
 
-    onSubmit?.('billingPlanForm', formData)
-    setOpenBillingPlanDialog(false)
-    billingForm.reset()
-  }
+    onSubmit?.("billingPlanForm", formData);
+    setOpenBillingPlanDialog(false);
+    billingForm.reset();
+  };
 
   const handlePrimaryAdminFormSave = (
-    values: z.infer<typeof primaryAdminFormSchema>
+    values: z.infer<typeof primaryAdminFormSchema>,
   ) => {
-    const formData = new FormData()
+    const formData = new FormData();
     for (const key in values) {
-      console.log(key, values[key])
-      formData.append(key, values[key])
+      console.log(key, values[key]);
+      formData.append(key, values[key]);
     }
 
-    onSubmit?.('primaryAdministratorForm', formData)
-    setOpenPrimaryAdminDialog(false)
-    primaryAdminForm.reset()
-  }
+    onSubmit?.("primaryAdministratorForm", formData);
+    setOpenPrimaryAdminDialog(false);
+    primaryAdminForm.reset();
+  };
 
   const handleCreditCardFormSave = (
-    values: z.infer<typeof creditCardFormSchema>
+    values: z.infer<typeof creditCardFormSchema>,
   ) => {
-    const formData = new FormData()
+    const formData = new FormData();
     for (const key in values) {
-      console.log(key, values[key])
-      formData.append(key, values[key])
+      console.log(key, values[key]);
+      formData.append(key, values[key]);
     }
 
-    onSubmit?.('creditCardForm', formData)
-    setOpenPaymentMethodDialog(false)
-    creditCardForm.reset()
-  }
+    onSubmit?.("creditCardForm", formData);
+    setOpenPaymentMethodDialog(false);
+    creditCardForm.reset();
+  };
 
   const clearError = () => {
-    setError(null)
-  }
+    setError(null);
+  };
 
   return (
     <>
@@ -276,7 +276,7 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
               <form
                 className="w-full my-4"
                 onSubmit={primaryAdminForm.handleSubmit(
-                  handlePrimaryAdminFormSave
+                  handlePrimaryAdminFormSave,
                 )}
               >
                 <FormField
@@ -295,9 +295,9 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                           className="max-w-[300px] m-0"
                           type={primaryAdminField.type}
                           {...rhfField}
-                          onChange={e => {
-                            rhfField.onChange(e)
-                            clearError()
+                          onChange={(e) => {
+                            rhfField.onChange(e);
+                            clearError();
                           }}
                         />
                       </FormControl>
@@ -366,7 +366,7 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                             <SelectValue placeholder={billingPlanField.label} />
                           </SelectTrigger>
                           <SelectContent>
-                            {billingPlanField.options.map(plan => (
+                            {billingPlanField.options.map((plan) => (
                               <SelectItem key={plan.value} value={plan.value}>
                                 {plan.label}
                               </SelectItem>
@@ -429,9 +429,9 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                           className="max-w-[300px] m-0"
                           type={creditCardFields[0].type}
                           {...rhfField}
-                          onChange={e => {
-                            rhfField.onChange(e)
-                            clearError()
+                          onChange={(e) => {
+                            rhfField.onChange(e);
+                            clearError();
                           }}
                         />
                       </FormControl>
@@ -456,9 +456,9 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                           className="max-w-[300px] m-0"
                           type={creditCardFields[1].type}
                           {...rhfField}
-                          onChange={e => {
-                            rhfField.onChange(e)
-                            clearError()
+                          onChange={(e) => {
+                            rhfField.onChange(e);
+                            clearError();
                           }}
                         />
                       </FormControl>
@@ -501,9 +501,9 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                             className="w-24 m-0"
                             type={creditCardFields[2].type}
                             {...rhfField}
-                            onChange={e => {
-                              rhfField.onChange(e)
-                              clearError()
+                            onChange={(e) => {
+                              rhfField.onChange(e);
+                              clearError();
                             }}
                           />
                         </FormControl>
@@ -533,7 +533,7 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                               <SelectValue placeholder="01" />
                             </SelectTrigger>
                             <SelectContent>
-                              {creditCardFields[3].options.map(option => (
+                              {creditCardFields[3].options.map((option) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}
@@ -574,7 +574,7 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {creditCardFields[4].options.map(option => (
+                              {creditCardFields[4].options.map((option) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}
@@ -608,5 +608,5 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
         </Dialog>
       </div>
     </>
-  )
+  );
 }

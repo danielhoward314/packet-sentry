@@ -1,56 +1,98 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AuthForm } from '@/components/AuthForm'
-import { ModeToggle } from '@/components/ModeToggle'
-import { Link } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
-import reactLogo from '@/assets/react.svg'
-import shadcnLogo from '@/assets/shadcn.svg'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthForm } from "@/components/AuthForm";
+import { ModeToggle } from "@/components/ModeToggle";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import reactLogo from "@/assets/react.svg";
+import shadcnLogo from "@/assets/shadcn.svg";
+import { Button } from "@/components/ui/button";
+import {
+  CredentialType,
+  IdentifierType,
+  ResetPasswordRequest,
+  ResetVerifyRequest,
+} from "@/types/api";
+import { useEnv } from "@/contexts/EnvContext";
+import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
-  const navigate = useNavigate()
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const { API_BASE_URL } = useEnv();
 
   const handleSendCode = async (formData: FormData) => {
-    const email = formData.get('email') as string
+    const email = formData.get("email") as string;
+
+    const body: ResetVerifyRequest = {
+      email: email,
+    };
+
     try {
-      // await sendResetEmail(email)
-      if (email !== 'a@b.com') {
-        setError('Test error.')
-        return
+      const response = await fetch(`${API_BASE_URL}/v1/reset-verify`, {
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        mode: "cors",
+        body: JSON.stringify(body),
+      });
+
+      if (response.status !== 200) {
+        throw new Error(
+          "non-200 status for forgot password email verify request",
+        );
       }
-      setEmail(email)
-      setStep(2)
+      setEmail(email);
+      setStep(2);
     } catch (err) {
-      setError('Could not send reset email.')
+      toast.error("Failed to send email for password reset.");
+      return;
     }
-  }
+  };
 
   const handleResetPassword = async (formData: FormData) => {
-    const verificationCode = formData.get('verificationCode') as string
-    const password = formData.get('password') as string
-    const confirm = formData.get('confirm') as string
+    const verificationCode = formData.get("verificationCode") as string;
+    const password = formData.get("password") as string;
+    const confirm = formData.get("confirm") as string;
 
     if (password !== confirm) {
-      setError('Passwords do not match.')
-      return
+      setError("Passwords do not match.");
+      return;
     }
+
+    const body: ResetPasswordRequest = {
+      credential: verificationCode,
+      credentialType: CredentialType.EMAIL_VERIFICATION_CODE,
+      identifier: email,
+      identifierType: IdentifierType.EMAIL,
+      newPassword: password,
+      confirmNewPassword: confirm,
+    };
 
     try {
-      // await resetPassword({ email, verificationCode, password })
-      console.log(email, verificationCode)
-      setStep(3)
+      const response = await fetch(`${API_BASE_URL}/v1/passwords`, {
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        mode: "cors",
+        body: JSON.stringify(body),
+      });
+
+      if (response.status !== 200) {
+        throw new Error("non-200 status for password reset");
+      }
+
+      setStep(3);
     } catch (err) {
-      setError('Failed to reset password.')
+      toast.error("Failed to reset password.");
+      setStep(1);
+      return;
     }
-  }
+  };
 
   const clearError = () => {
-    setError(null)
-  }
+    setError(null);
+  };
 
   return (
     <div className="relative flex h-full min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
@@ -62,7 +104,7 @@ export default function ForgotPasswordPage() {
           <AuthForm
             bottomText={
               <>
-                Go back?{' '}
+                Go back?{" "}
                 <Link to="/login" className="underline underline-offset-4">
                   Log in
                 </Link>
@@ -70,10 +112,10 @@ export default function ForgotPasswordPage() {
             }
             buttonText="Send Code"
             error={error}
-            fields={[{ type: 'email', label: 'Email', id: 'email' }]}
+            fields={[{ type: "email", label: "Email", id: "email" }]}
             onChange={clearError}
-            onSubmit={async formData => {
-              handleSendCode(formData)
+            onSubmit={async (formData) => {
+              handleSendCode(formData);
             }}
             subtitle="Enter your email to receive a reset code"
             title="Reset"
@@ -84,7 +126,7 @@ export default function ForgotPasswordPage() {
           <AuthForm
             bottomText={
               <>
-                Go back?{' '}
+                Go back?{" "}
                 <Link to="/login" className="underline underline-offset-4">
                   Log in
                 </Link>
@@ -93,13 +135,13 @@ export default function ForgotPasswordPage() {
             buttonText="Reset Password"
             error={error}
             fields={[
-              { type: 'text', label: 'Reset Code', id: 'verificationCode' },
-              { type: 'password', label: 'New Password', id: 'password' },
-              { type: 'password', label: 'Confirm Password', id: 'confirm' },
+              { type: "text", label: "Reset Code", id: "verificationCode" },
+              { type: "password", label: "New Password", id: "password" },
+              { type: "password", label: "Confirm Password", id: "confirm" },
             ]}
             onChange={clearError}
-            onSubmit={async formData => {
-              handleResetPassword(formData)
+            onSubmit={async (formData) => {
+              handleResetPassword(formData);
             }}
             subtitle="Check your email for the code"
             title="Enter Reset Code"
@@ -117,7 +159,7 @@ export default function ForgotPasswordPage() {
                       Your password is reset.
                     </p>
                     <Button
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate("/login")}
                       className="m-8 w-full"
                     >
                       Login
@@ -142,5 +184,5 @@ export default function ForgotPasswordPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

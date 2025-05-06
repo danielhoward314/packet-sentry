@@ -148,6 +148,7 @@ func main() {
 
 	authSvc := services.NewAuthService(
 		datastore,
+		registrationDatastore,
 		tokenDatastore,
 		smtpDialer,
 	)

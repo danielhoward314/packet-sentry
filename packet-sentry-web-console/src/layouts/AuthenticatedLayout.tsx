@@ -1,10 +1,10 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppSidebar } from '@/components/AppSidebar'
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AppSidebar } from "@/components/AppSidebar";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,41 +12,41 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
-import { Separator } from '@/components/ui/separator'
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Cog, UserCircle } from 'lucide-react'
-import { ModeToggle } from '@/components/ModeToggle'
-import { Button } from '@/components/ui/button'
-import { generateBreadcrumbs } from '@/contexts/BreadcrumbContext'
-import React from 'react'
+} from "@/components/ui/dropdown-menu";
+import { Cog, UserCircle } from "lucide-react";
+import { ModeToggle } from "@/components/ModeToggle";
+import { Button } from "@/components/ui/button";
+import { generateBreadcrumbs } from "@/contexts/BreadcrumbContext";
+import React from "react";
 
 export default function AuthenticatedLayout() {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const navData = {
     navMain: [
       {
-        title: 'Device Management',
+        title: "Device Management",
         items: [
-          { title: 'New Device', url: '/devices/new' },
-          { title: 'Existing Devices', url: '/devices/list' },
+          { title: "New Device", url: "/devices/new" },
+          { title: "Existing Devices", url: "/devices/list" },
         ],
       },
     ],
-  }
+  };
 
-  const breadcrumbs = generateBreadcrumbs(location.pathname)
+  const breadcrumbs = generateBreadcrumbs(location.pathname);
 
   const handleMenuClick = (item: string) => {
-    navigate(item)
-  }
+    navigate(item);
+  };
 
   return (
     <SidebarProvider>
@@ -82,11 +82,11 @@ export default function AuthenticatedLayout() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleMenuClick('/billing')}>
+                  <DropdownMenuItem onClick={() => handleMenuClick("/billing")}>
                     Billing Details
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleMenuClick('/administrators')}
+                    onClick={() => handleMenuClick("/administrators")}
                   >
                     Administrators
                   </DropdownMenuItem>
@@ -100,16 +100,16 @@ export default function AuthenticatedLayout() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => handleMenuClick('/settings')}
+                    onClick={() => handleMenuClick("/settings")}
                   >
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleMenuClick('/reset-password')}
+                    onClick={() => handleMenuClick("/reset-password")}
                   >
                     Reset Password
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuClick('/logout')}>
+                  <DropdownMenuItem onClick={() => handleMenuClick("/logout")}>
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -124,5 +124,5 @@ export default function AuthenticatedLayout() {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

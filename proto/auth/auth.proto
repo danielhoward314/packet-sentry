@@ -32,7 +32,21 @@ service AuthService {
       body: "*"
     };
   }
+  rpc ResetVerify (ResetVerifyRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/v1/reset-verify"
+      body: "*"
+    };
+  }
+  rpc ResetPassword (ResetPasswordRequest) returns (Empty) {
+    option (google.api.http) = {
+      put: "/v1/passwords"
+      body: "*"
+    };
+  }
 }
+
+message Empty {}
 
 message ValidateSessionRequest {
   string jwt = 1;
@@ -80,4 +94,27 @@ message CreateInstallKeyRequest {
 
 message CreateInstallKeyResponse {
   string install_key = 1;
+}
+
+message ResetVerifyRequest {
+  string email = 1;
+}
+
+enum CredentialType {
+    PASSWORD = 0;
+    EMAIL_VERIFICATION_CODE = 1;
+}
+
+enum IdentifierType {
+    ID = 0;
+    EMAIL = 1;
+}
+
+message ResetPasswordRequest {
+  string credential = 1;
+  CredentialType credential_type = 2;
+  string identifier = 3;
+  IdentifierType identifier_type = 4;
+  string new_password = 5;
+  string confirm_new_password = 6;
 }

@@ -1,5 +1,5 @@
-import { DevicesTable } from '@/components/DevicesTable'
-import MainContentCardLayout from '@/layouts/MainContentCardLayout'
+import { DevicesTable } from "@/components/DevicesTable";
+import MainContentCardLayout from "@/layouts/MainContentCardLayout";
 
 export default function DevicesListPage() {
   return (
@@ -9,5 +9,5 @@ export default function DevicesListPage() {
     >
       <DevicesTable />
     </MainContentCardLayout>
-  )
+  );
 }

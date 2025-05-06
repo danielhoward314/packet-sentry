@@ -1,19 +1,29 @@
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
-import reactLogo from '@/assets/react.svg'
-import shadcnLogo from '@/assets/shadcn.svg'
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import reactLogo from "@/assets/react.svg";
+import shadcnLogo from "@/assets/shadcn.svg";
+import { LOCALSTORAGE } from "@/lib/consts";
 
 export default function LogoutPage() {
-  const navigate = useNavigate()
-  const { recheckAuth } = useAuth()
+  const navigate = useNavigate();
+  const { recheckAuth } = useAuth();
+  const {
+    ADMIN_UI_ACCESS_TOKEN,
+    ADMIN_UI_REFRESH_TOKEN,
+    API_ACCESS_TOKEN,
+    API_REFRESH_TOKEN,
+  } = LOCALSTORAGE;
 
   const handleLogout = async () => {
-    localStorage.setItem('jwt', '')
-    await recheckAuth()
-    navigate('/')
-  }
+    localStorage.removeItem(ADMIN_UI_ACCESS_TOKEN);
+    localStorage.removeItem(ADMIN_UI_REFRESH_TOKEN);
+    localStorage.removeItem(API_ACCESS_TOKEN);
+    localStorage.removeItem(API_REFRESH_TOKEN);
+    await recheckAuth();
+    navigate("/");
+  };
   return (
     <main className="w-full flex flex-col items-center gap-x-4 px-4 gap-t-4 pt-4 overflow-y-auto">
       <Card className="overflow-hidden p-0 w-3/4 h-full overflow-y-auto">
@@ -33,7 +43,7 @@ export default function LogoutPage() {
             </Button>
 
             <div className="text-center text-sm">
-              Go back?{' '}
+              Go back?{" "}
               <Link to="/home" className="underline underline-offset-4">
                 Home
               </Link>
@@ -54,5 +64,5 @@ export default function LogoutPage() {
         </CardContent>
       </Card>
     </main>
-  )
+  );
 }

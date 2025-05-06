@@ -95,13 +95,15 @@ services:
     build:
       context: ./packet-sentry-web-console
       dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=https://gateway.packet-sentry.local:8080
     ports:
       - "80:80"
     restart: always
-    networks:
-      backend:
-        aliases:
-          - web-console.packet-sentry.local
+    depends_on:
+      - web-api
+    extra_hosts:
+      - "gateway.packet-sentry.local:host-gateway"
   worker:
     container_name: packet-sentry-worker
     build:

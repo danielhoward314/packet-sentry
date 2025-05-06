@@ -4,14 +4,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { ReactNode } from 'react'
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ReactNode } from "react";
 
 interface MainContentCardLayoutProps {
-  cardDescription: string
-  cardTitle: string
-  children: ReactNode
+  cardDescription: string;
+  cardTitle: string;
+  children: ReactNode;
 }
 
 export default function MainContentCardLayout({
@@ -32,5 +32,5 @@ export default function MainContentCardLayout({
         </CardContent>
       </Card>
     </main>
-  )
+  );
 }

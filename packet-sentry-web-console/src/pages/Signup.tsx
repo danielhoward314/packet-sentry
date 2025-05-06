@@ -1,34 +1,105 @@
-import { useState } from 'react'
-import { AuthForm } from '@/components/AuthForm'
-import { ModeToggle } from '@/components/ModeToggle'
-import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import reactLogo from '@/assets/react.svg'
-import shadcnLogo from '@/assets/shadcn.svg'
+import { useState } from "react";
+import { useEnv } from "@/contexts/EnvContext";
+import { AuthForm } from "@/components/AuthForm";
+import { ModeToggle } from "@/components/ModeToggle";
+import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import reactLogo from "@/assets/react.svg";
+import shadcnLogo from "@/assets/shadcn.svg";
+import { LOCALSTORAGE } from "@/lib/consts";
+import { isSignupResponse, isVerifyResponse } from "@/lib/apiTypeGuards";
+import { SignupRequest, VerifyRequest } from "@/types/api";
 
 export default function SignupPage() {
-  const navigate = useNavigate()
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const {
+    ADMIN_UI_ACCESS_TOKEN,
+    ADMIN_UI_REFRESH_TOKEN,
+    API_ACCESS_TOKEN,
+    API_REFRESH_TOKEN,
+  } = LOCALSTORAGE;
+  const navigate = useNavigate();
+  const { API_BASE_URL } = useEnv();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [token, setToken] = useState("");
 
   const handleSignup = async (formData: FormData) => {
-    const name = formData.get('name') as string
-    const organization = formData.get('organization') as string
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    console.log(name, organization, email, password)
-    if (email === 'a@b.com' && password === 'abc') {
-      setStep(2)
+    const name = formData.get("name") as string;
+    const organization = formData.get("organization") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    const body: SignupRequest = {
+      primaryAdministratorEmail: email,
+      primaryAdministratorName: name,
+      primaryAdministratorCleartextPassword: password,
+      organizationName: organization,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/signup`, {
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        mode: "cors",
+        body: JSON.stringify(body),
+      });
+
+      if (response.status !== 200) {
+        throw new Error("non-200 response to /v1/signup");
+      }
+
+      const data: unknown = await response.json();
+      if (!isSignupResponse(data)) {
+        throw new Error("Invalid signup response format");
+      }
+
+      setToken(data.token);
+      setStep(2);
+    } catch (e) {
+      console.error("sign up failed: ", e);
+      toast.error("Failed to save your new account");
+      setStep(1);
     }
-  }
+  };
 
   const handleVerify = async (formData: FormData) => {
-    const verificationCode = formData.get('verificationCode') as string
-    if (verificationCode === '123456') {
-      setStep(3)
+    const verificationCode = formData.get("verificationCode") as string;
+
+    const body: VerifyRequest = {
+      token,
+      verificationCode,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/verify`, {
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        mode: "cors",
+        body: JSON.stringify(body),
+      });
+
+      const data: unknown = await response.json();
+
+      if (!isVerifyResponse(data)) {
+        throw new Error("Invalid verify response format");
+      }
+
+      localStorage.setItem(ADMIN_UI_ACCESS_TOKEN, data.adminUiAccessToken);
+      localStorage.setItem(ADMIN_UI_REFRESH_TOKEN, data.adminUiRefreshToken);
+      localStorage.setItem(API_ACCESS_TOKEN, data.apiAccessToken);
+      localStorage.setItem(API_REFRESH_TOKEN, data.apiRefreshToken);
+
+      setStep(3);
+    } catch (e) {
+      console.error("verify failed: ", e);
+      toast.error("Failed to verify your new account.");
+      setStep(1);
+    } finally {
+      setToken("");
     }
-  }
+  };
 
   return (
     <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
@@ -41,7 +112,7 @@ export default function SignupPage() {
           <AuthForm
             bottomText={
               <>
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Link to="/login" className="underline underline-offset-4">
                   Log in
                 </Link>
@@ -49,13 +120,13 @@ export default function SignupPage() {
             }
             buttonText="Sign up"
             fields={[
-              { type: 'text', label: 'Full Name', id: 'name' },
-              { type: 'text', label: 'Organization', id: 'organization' },
-              { type: 'email', label: 'Email', id: 'email' },
-              { type: 'password', label: 'Password', id: 'password' },
+              { type: "text", label: "Full Name", id: "name" },
+              { type: "text", label: "Organization", id: "organization" },
+              { type: "email", label: "Email", id: "email" },
+              { type: "password", label: "Password", id: "password" },
             ]}
-            onSubmit={async formData => {
-              handleSignup(formData)
+            onSubmit={async (formData) => {
+              handleSignup(formData);
             }}
             subtitle="Create your Packet Sentry account"
             title="Welcome"
@@ -65,12 +136,12 @@ export default function SignupPage() {
           <AuthForm
             bottomText={
               <>
-                Start over?{' '}
+                Start over?{" "}
                 <Link
                   to="/signup"
                   className="underline underline-offset-4"
                   onClick={() => {
-                    setStep(1)
+                    setStep(1);
                   }}
                 >
                   Sign up
@@ -80,13 +151,13 @@ export default function SignupPage() {
             buttonText="Submit"
             fields={[
               {
-                type: 'text',
-                label: 'Email Verification Code',
-                id: 'verificationCode',
+                type: "text",
+                label: "Email Verification Code",
+                id: "verificationCode",
               },
             ]}
-            onSubmit={async formData => {
-              handleVerify(formData)
+            onSubmit={async (formData) => {
+              handleVerify(formData);
             }}
             subtitle="Enter the verification code sent to your email."
             title="Verify"
@@ -104,7 +175,7 @@ export default function SignupPage() {
                       Your account has been created.
                     </p>
                     <Button
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate("/login")}
                       className="m-8 w-full"
                     >
                       Login
@@ -129,5 +200,5 @@ export default function SignupPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

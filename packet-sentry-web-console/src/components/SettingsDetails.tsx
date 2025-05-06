@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react";
 import {
   Form,
   FormControl,
@@ -6,11 +6,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { ModeRadioForm } from '@/components/ModeRadioForm'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { ModeRadioForm } from "@/components/ModeRadioForm";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -19,78 +19,78 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { useTheme } from '@/contexts/ThemeProvider'
-import { z, ZodTypeAny } from 'zod'
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useTheme } from "@/contexts/ThemeProvider";
+import { z, ZodTypeAny } from "zod";
 
 type Field =
-  | { type: 'text'; label: string; id: string }
-  | { type: 'email'; label: string; id: string }
+  | { type: "text"; label: string; id: string }
+  | { type: "email"; label: string; id: string }
   | {
-      type: 'select'
-      label: string
-      id: string
-      options: { value: string; label: string }[]
-    }
+      type: "select";
+      label: string;
+      id: string;
+      options: { value: string; label: string }[];
+    };
 
 interface SettingsDetailsProps
-  extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
-  fields: Field[]
-  onSubmit?: (formData: FormData) => void | Promise<void>
+  extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+  fields: Field[];
+  onSubmit?: (formData: FormData) => void | Promise<void>;
 }
 
 function buildZodSchema(fields: Field[]) {
-  const shape: Record<string, ZodTypeAny> = {}
+  const shape: Record<string, ZodTypeAny> = {};
 
   for (const field of fields) {
-    let schema = z.string().min(1, { message: `${field.label} is required.` })
+    let schema = z.string().min(1, { message: `${field.label} is required.` });
 
-    if (field.type === 'email') {
-      schema = schema.email({ message: 'Invalid email address.' })
+    if (field.type === "email") {
+      schema = schema.email({ message: "Invalid email address." });
     }
 
-    shape[field.id] = schema
+    shape[field.id] = schema;
   }
 
-  shape['theme'] = z.enum(['light', 'dark'], {
-    required_error: 'Please select a theme.',
-  })
+  shape["theme"] = z.enum(["light", "dark"], {
+    required_error: "Please select a theme.",
+  });
 
-  return z.object(shape)
+  return z.object(shape);
 }
 
 export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
-  const [error, setError] = useState<string | null>(null)
-  const [openSettingsFormDialog, setOpenSettingsFormDialog] = useState(false)
-  const { theme } = useTheme()
-  const formSchema = buildZodSchema(fields)
+  const [error, setError] = useState<string | null>(null);
+  const [openSettingsFormDialog, setOpenSettingsFormDialog] = useState(false);
+  const { theme } = useTheme();
+  const formSchema = buildZodSchema(fields);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ...Object.fromEntries(fields.map(f => [f.id, ''])),
-      theme: 'light',
+      ...Object.fromEntries(fields.map((f) => [f.id, ""])),
+      theme: "light",
     },
-  })
+  });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const formData = new FormData()
+    const formData = new FormData();
     for (const key in values) {
-      formData.append(key, values[key])
+      formData.append(key, values[key]);
     }
-    onSubmit?.(formData)
-    setOpenSettingsFormDialog(false)
-    form.reset()
-  }
+    onSubmit?.(formData);
+    setOpenSettingsFormDialog(false);
+    form.reset();
+  };
 
-  const themeLabel = theme === 'light' ? 'Light' : 'Dark'
+  const themeLabel = theme === "light" ? "Light" : "Dark";
 
   const clearError = () => {
-    setError(null)
-  }
+    setError(null);
+  };
 
   return (
     <>
@@ -101,7 +101,7 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
       <Label className="text-lg font-bold">Appearance</Label>
       <div className="flex justify-between">
         <div
-          className={`${theme === 'light' ? 'force-light' : 'dark'} w-[300px] h-[100px] rounded border p-4 transition-all bg-background text-foreground [&_.skeleton]:bg-muted`}
+          className={`${theme === "light" ? "force-light" : "dark"} w-[300px] h-[100px] rounded border p-4 transition-all bg-background text-foreground [&_.skeleton]:bg-muted`}
         >
           <Label className="pb-2">{themeLabel}</Label>
           <div className="flex items-center gap-4">
@@ -133,8 +133,8 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
                 className="w-full my-4"
                 onSubmit={form.handleSubmit(handleSubmit)}
               >
-                {fields.map(field => {
-                  if (field.id === 'theme') return
+                {fields.map((field) => {
+                  if (field.id === "theme") return;
                   return (
                     <FormField
                       key={field.id}
@@ -152,9 +152,9 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
                               className="w-full m-0"
                               type={field.type}
                               {...rhfField}
-                              onChange={e => {
-                                rhfField.onChange(e)
-                                clearError()
+                              onChange={(e) => {
+                                rhfField.onChange(e);
+                                clearError();
                               }}
                             />
                           </FormControl>
@@ -162,7 +162,7 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
                         </FormItem>
                       )}
                     />
-                  )
+                  );
                 })}
 
                 <FormField
@@ -200,5 +200,5 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
         </Dialog>
       </div>
     </>
-  )
+  );
 }

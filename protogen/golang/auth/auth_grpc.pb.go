@@ -23,6 +23,8 @@ const (
 	AuthService_Login_FullMethodName            = "/auth.AuthService/Login"
 	AuthService_RefreshToken_FullMethodName     = "/auth.AuthService/RefreshToken"
 	AuthService_CreateInstallKey_FullMethodName = "/auth.AuthService/CreateInstallKey"
+	AuthService_ResetVerify_FullMethodName      = "/auth.AuthService/ResetVerify"
+	AuthService_ResetPassword_FullMethodName    = "/auth.AuthService/ResetPassword"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -33,6 +35,8 @@ type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	CreateInstallKey(ctx context.Context, in *CreateInstallKeyRequest, opts ...grpc.CallOption) (*CreateInstallKeyResponse, error)
+	ResetVerify(ctx context.Context, in *ResetVerifyRequest, opts ...grpc.CallOption) (*Empty, error)
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type authServiceClient struct {
@@ -83,6 +87,26 @@ func (c *authServiceClient) CreateInstallKey(ctx context.Context, in *CreateInst
 	return out, nil
 }
 
+func (c *authServiceClient) ResetVerify(ctx context.Context, in *ResetVerifyRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_ResetVerify_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AuthService_ResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -91,6 +115,8 @@ type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	CreateInstallKey(context.Context, *CreateInstallKeyRequest) (*CreateInstallKeyResponse, error)
+	ResetVerify(context.Context, *ResetVerifyRequest) (*Empty, error)
+	ResetPassword(context.Context, *ResetPasswordRequest) (*Empty, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -112,6 +138,12 @@ func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshToke
 }
 func (UnimplementedAuthServiceServer) CreateInstallKey(context.Context, *CreateInstallKeyRequest) (*CreateInstallKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateInstallKey not implemented")
+}
+func (UnimplementedAuthServiceServer) ResetVerify(context.Context, *ResetVerifyRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetVerify not implemented")
+}
+func (UnimplementedAuthServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetPassword not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -206,6 +238,42 @@ func _AuthService_CreateInstallKey_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ResetVerify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetVerifyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResetVerify(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResetVerify_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResetVerify(ctx, req.(*ResetVerifyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +296,14 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateInstallKey",
 			Handler:    _AuthService_CreateInstallKey_Handler,
+		},
+		{
+			MethodName: "ResetVerify",
+			Handler:    _AuthService_ResetVerify_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _AuthService_ResetPassword_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

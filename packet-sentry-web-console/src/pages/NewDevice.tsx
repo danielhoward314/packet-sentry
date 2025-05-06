@@ -1,5 +1,5 @@
-import { DeviceOnboarding } from '@/components/DeviceOnboarding'
-import MainContentCardLayout from '@/layouts/MainContentCardLayout'
+import { DeviceOnboarding } from "@/components/DeviceOnboarding";
+import MainContentCardLayout from "@/layouts/MainContentCardLayout";
 
 export default function NewDevicePage() {
   return (
@@ -9,5 +9,5 @@ export default function NewDevicePage() {
     >
       <DeviceOnboarding />
     </MainContentCardLayout>
-  )
+  );
 }

@@ -1,24 +1,24 @@
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from "lucide-react";
 
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Theme, useTheme } from '../contexts/ThemeProvider'
+} from "@/components/ui/dropdown-menu";
+import { Theme, useTheme } from "../contexts/ThemeProvider";
 
 export function ModeToggle() {
-  const { setTheme } = useTheme()
+  const { setTheme } = useTheme();
 
   const handleThemeSelection = (theme: String) => {
-    if (theme === 'light' || theme === 'dark' || theme === 'system') {
-      setTheme(theme as Theme)
+    if (theme === "light" || theme === "dark" || theme === "system") {
+      setTheme(theme as Theme);
     } else {
-      console.warn('Invalid theme selected:', theme)
+      console.warn("Invalid theme selected:", theme);
     }
-  }
+  };
 
   return (
     <DropdownMenu>
@@ -30,16 +30,16 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleThemeSelection('light')}>
+        <DropdownMenuItem onClick={() => handleThemeSelection("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeSelection('dark')}>
+        <DropdownMenuItem onClick={() => handleThemeSelection("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeSelection('system')}>
+        <DropdownMenuItem onClick={() => handleThemeSelection("system")}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

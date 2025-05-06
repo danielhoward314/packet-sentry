@@ -1,45 +1,45 @@
-import { useState, useEffect } from 'react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ClipboardCopyIcon } from 'lucide-react'
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ClipboardCopyIcon } from "lucide-react";
 
 export function DeviceOnboarding() {
-  const [step, setStep] = useState('os')
-  const [os, setOs] = useState<string | null>(null)
-  const [deviceName, setDeviceName] = useState('')
-  const [installKey, setInstallKey] = useState<string | null>(null)
-  const [backendReady, setBackendReady] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [step, setStep] = useState("os");
+  const [os, setOs] = useState<string | null>(null);
+  const [deviceName, setDeviceName] = useState("");
+  const [installKey, setInstallKey] = useState<string | null>(null);
+  const [backendReady, setBackendReady] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (step === 'waiting') {
-      const timer = setTimeout(() => setBackendReady(true), 3000)
-      return () => clearTimeout(timer)
+    if (step === "waiting") {
+      const timer = setTimeout(() => setBackendReady(true), 3000);
+      return () => clearTimeout(timer);
     }
-  }, [step])
+  }, [step]);
 
   const generateInstallKey = () => {
-    const key = crypto.randomUUID()
-    setInstallKey(key)
-  }
+    const key = crypto.randomUUID();
+    setInstallKey(key);
+  };
 
   const copyToClipboard = async () => {
     if (installKey) {
-      await navigator.clipboard.writeText(installKey)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      await navigator.clipboard.writeText(installKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     }
-  }
+  };
 
   return (
     <Tabs
@@ -70,12 +70,12 @@ export function DeviceOnboarding() {
               Download the Packet Sentry Agent
             </h2>
             <div className="flex gap-4">
-              {['Windows', 'macOS', 'Linux'].map(platform => (
+              {["Windows", "macOS", "Linux"].map((platform) => (
                 <Button
                   key={platform}
                   onClick={() => {
-                    setOs(platform)
-                    setStep('device')
+                    setOs(platform);
+                    setStep("device");
                   }}
                 >
                   {platform}
@@ -92,11 +92,11 @@ export function DeviceOnboarding() {
             <h2 className="text-lg font-semibold">Name your device</h2>
             <Input
               value={deviceName}
-              onChange={e => setDeviceName(e.target.value)}
+              onChange={(e) => setDeviceName(e.target.value)}
               placeholder="My-Laptop"
             />
             <Button
-              onClick={() => setStep('key')}
+              onClick={() => setStep("key")}
               disabled={!deviceName.trim()}
             >
               Continue
@@ -120,7 +120,7 @@ export function DeviceOnboarding() {
                 </DialogHeader>
                 <div className="flex items-center gap-2">
                   <code className="bg-muted px-2 py-1 rounded text-sm">
-                    {installKey || 'No key yet'}
+                    {installKey || "No key yet"}
                   </code>
                   <Button
                     variant="ghost"
@@ -134,7 +134,7 @@ export function DeviceOnboarding() {
                     <span className="text-sm text-green-600">Copied!</span>
                   )}
                 </div>
-                <Button onClick={() => setStep('summary')}>Continue</Button>
+                <Button onClick={() => setStep("summary")}>Continue</Button>
               </DialogContent>
             </Dialog>
           </CardContent>
@@ -150,7 +150,7 @@ export function DeviceOnboarding() {
               <li>Run it on the device named "{deviceName}".</li>
               <li>When prompted, enter the install key.</li>
             </ul>
-            <Button onClick={() => setStep('waiting')}>Finish</Button>
+            <Button onClick={() => setStep("waiting")}>Finish</Button>
           </CardContent>
         </Card>
       </TabsContent>
@@ -172,5 +172,5 @@ export function DeviceOnboarding() {
         </Card>
       </TabsContent>
     </Tabs>
-  )
+  );
 }

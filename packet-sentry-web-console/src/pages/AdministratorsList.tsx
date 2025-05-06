@@ -1,5 +1,5 @@
-import { AdministratorsTable } from '@/components/AdministratorsTable'
-import MainContentCardLayout from '@/layouts/MainContentCardLayout'
+import { AdministratorsTable } from "@/components/AdministratorsTable";
+import MainContentCardLayout from "@/layouts/MainContentCardLayout";
 
 export default function AdministratorsListPage() {
   return (
@@ -9,5 +9,5 @@ export default function AdministratorsListPage() {
     >
       <AdministratorsTable />
     </MainContentCardLayout>
-  )
+  );
 }

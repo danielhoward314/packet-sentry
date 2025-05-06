@@ -1,12 +1,12 @@
-import type * as React from 'react'
-import { ChevronRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import type * as React from "react";
+import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -18,26 +18,26 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from '@/components/ui/sidebar'
-import reactLogo from '@/assets/react.svg'
-import shadcnLogo from '@/assets/shadcn.svg'
+} from "@/components/ui/sidebar";
+import reactLogo from "@/assets/react.svg";
+import shadcnLogo from "@/assets/shadcn.svg";
 
 export interface NavItem {
-  title: string
-  url: string
-  isActive?: boolean
+  title: string;
+  url: string;
+  isActive?: boolean;
 }
 
 export interface NavGroup {
-  title: string
-  url?: string // optional: some groups might be "headers" with no URL
-  items: NavItem[]
+  title: string;
+  url?: string; // optional: some groups might be "headers" with no URL
+  items: NavItem[];
 }
 
 export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navData: {
-    navMain: NavGroup[]
-  }
+    navMain: NavGroup[];
+  };
 }
 
 export function AppSidebar({ navData, ...props }: AppSidebarProps) {
@@ -62,7 +62,7 @@ export function AppSidebar({ navData, ...props }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {/* We create a collapsible SidebarGroup for each parent. */}
-        {navData.navMain.map(item => (
+        {navData.navMain.map((item) => (
           <Collapsible
             key={item.title}
             title={item.title}
@@ -75,17 +75,17 @@ export function AppSidebar({ navData, ...props }: AppSidebarProps) {
                 className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <CollapsibleTrigger>
-                  {item.title}{' '}
+                  {item.title}{" "}
                   <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
                 </CollapsibleTrigger>
               </SidebarGroupLabel>
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {item.items.map(item => (
+                    {item.items.map((item) => (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild isActive={item.isActive}>
-                          <a href={item.url}>{item.title}</a>
+                          <Link to={item.url}>{item.title}</Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
@@ -98,5 +98,5 @@ export function AppSidebar({ navData, ...props }: AppSidebarProps) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

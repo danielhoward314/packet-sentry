@@ -1,32 +1,32 @@
-'use client'
+"use client";
 
-import { BillingDetails } from '@/components/BillingDetails'
-import MainContentCardLayout from '@/layouts/MainContentCardLayout'
-import { toast } from 'sonner'
+import { BillingDetails } from "@/components/BillingDetails";
+import MainContentCardLayout from "@/layouts/MainContentCardLayout";
+import { toast } from "sonner";
 
 export default function BillingPage() {
   const handleBillingPageSave = async (
     formName: string,
-    formData: FormData
+    formData: FormData,
   ) => {
-    const data = Object.fromEntries(formData.entries())
+    const data = Object.fromEntries(formData.entries());
 
-    console.log(data) // For debugging
+    console.log(data); // For debugging
 
-    let toastSuccessMsg = ''
+    let toastSuccessMsg = "";
 
-    if (formName === 'primaryAdministratorForm') {
-      console.log(data.primaryAdminEmail)
-      toastSuccessMsg = 'Your primary administrator has been updated.'
-    } else if (formName === 'billingPlanForm') {
-      console.log(data.billingPlan)
-      toastSuccessMsg = 'Your billing plan has been updated.'
-    } else if (formName === 'creditCardForm') {
-      toastSuccessMsg = 'Your payment method has been updated.'
+    if (formName === "primaryAdministratorForm") {
+      console.log(data.primaryAdminEmail);
+      toastSuccessMsg = "Your primary administrator has been updated.";
+    } else if (formName === "billingPlanForm") {
+      console.log(data.billingPlan);
+      toastSuccessMsg = "Your billing plan has been updated.";
+    } else if (formName === "creditCardForm") {
+      toastSuccessMsg = "Your payment method has been updated.";
     }
 
-    toast.success(toastSuccessMsg)
-  }
+    toast.success(toastSuccessMsg);
+  };
 
   return (
     <MainContentCardLayout
@@ -35,5 +35,5 @@ export default function BillingPage() {
     >
       <BillingDetails onSubmit={handleBillingPageSave} />
     </MainContentCardLayout>
-  )
+  );
 }

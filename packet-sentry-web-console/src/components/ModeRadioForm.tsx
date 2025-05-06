@@ -1,22 +1,22 @@
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ModeRadioFormProps = {
   field: {
-    value: string
-    onChange: (value: string) => void
-  }
-  clearError: () => void
-}
+    value: string;
+    onChange: (value: string) => void;
+  };
+  clearError: () => void;
+};
 
 export function ModeRadioForm({ field, clearError }: ModeRadioFormProps) {
   return (
     <RadioGroup
       value={field.value}
-      onValueChange={val => {
-        field.onChange(val)
-        clearError()
+      onValueChange={(val) => {
+        field.onChange(val);
+        clearError();
       }}
       className="grid grid-cols-2 gap-16 w-full"
     >
@@ -52,5 +52,5 @@ export function ModeRadioForm({ field, clearError }: ModeRadioFormProps) {
         </div>
       </div>
     </RadioGroup>
-  )
+  );
 }

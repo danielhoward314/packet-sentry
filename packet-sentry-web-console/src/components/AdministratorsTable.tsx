@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import * as React from 'react'
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,11 +12,11 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table'
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react'
+} from "@tanstack/react-table";
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
 
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,8 +25,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -34,125 +34,125 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from "@/components/ui/table";
 
 const data: Administrator[] = [
   {
-    id: 'm5gr84i9',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'ken99@example.com',
+    id: "m5gr84i9",
+    role: "Primary",
+    name: "First Last",
+    email: "ken99@example.com",
   },
   {
-    id: '3u1reuv4',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Abe45@example.com',
+    id: "3u1reuv4",
+    role: "Primary",
+    name: "First Last",
+    email: "Abe45@example.com",
   },
   {
-    id: 'derv1ws0',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Monserrat44@example.com',
+    id: "derv1ws0",
+    role: "Primary",
+    name: "First Last",
+    email: "Monserrat44@example.com",
   },
   {
-    id: '5kma53ae',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Silas22@example.com',
+    id: "5kma53ae",
+    role: "Primary",
+    name: "First Last",
+    email: "Silas22@example.com",
   },
   {
-    id: 'bhqecj4p',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'carmella@example.com',
+    id: "bhqecj4p",
+    role: "Primary",
+    name: "First Last",
+    email: "carmella@example.com",
   },
   {
-    id: 'm5gr84i9',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'ken99@example.com',
+    id: "m5gr84i9",
+    role: "Primary",
+    name: "First Last",
+    email: "ken99@example.com",
   },
   {
-    id: '3u1reuv4',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Abe45@example.com',
+    id: "3u1reuv4",
+    role: "Primary",
+    name: "First Last",
+    email: "Abe45@example.com",
   },
   {
-    id: 'derv1ws0',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Monserrat44@example.com',
+    id: "derv1ws0",
+    role: "Primary",
+    name: "First Last",
+    email: "Monserrat44@example.com",
   },
   {
-    id: '5kma53ae',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Silas22@example.com',
+    id: "5kma53ae",
+    role: "Primary",
+    name: "First Last",
+    email: "Silas22@example.com",
   },
   {
-    id: 'bhqecj4p',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'carmella@example.com',
+    id: "bhqecj4p",
+    role: "Primary",
+    name: "First Last",
+    email: "carmella@example.com",
   },
   {
-    id: 'm5gr84i9',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'ken99@example.com',
+    id: "m5gr84i9",
+    role: "Primary",
+    name: "First Last",
+    email: "ken99@example.com",
   },
   {
-    id: '3u1reuv4',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Abe45@example.com',
+    id: "3u1reuv4",
+    role: "Primary",
+    name: "First Last",
+    email: "Abe45@example.com",
   },
   {
-    id: 'derv1ws0',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Monserrat44@example.com',
+    id: "derv1ws0",
+    role: "Primary",
+    name: "First Last",
+    email: "Monserrat44@example.com",
   },
   {
-    id: '5kma53ae',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'Silas22@example.com',
+    id: "5kma53ae",
+    role: "Primary",
+    name: "First Last",
+    email: "Silas22@example.com",
   },
   {
-    id: 'bhqecj4p',
-    role: 'Primary',
-    name: 'First Last',
-    email: 'carmella@example.com',
+    id: "bhqecj4p",
+    role: "Primary",
+    name: "First Last",
+    email: "carmella@example.com",
   },
-]
+];
 
 export type Administrator = {
-  id: string
-  role: 'Primary' | 'Secondary'
-  name: string
-  email: string
-}
+  id: string;
+  role: "Primary" | "Secondary";
+  name: string;
+  email: string;
+};
 
 export const columns: ColumnDef<Administrator>[] = [
   {
-    id: 'select',
+    id: "select",
     header: ({ table }) => (
       <Checkbox
         checked={
           table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
+          (table.getIsSomePageRowsSelected() && "indeterminate")
         }
-        onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
-        onCheckedChange={value => row.toggleSelected(!!value)}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
       />
     ),
@@ -160,35 +160,35 @@ export const columns: ColumnDef<Administrator>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: 'name',
-    header: 'Name',
-    cell: ({ row }) => <div className="capitalize">{row.getValue('name')}</div>,
+    accessorKey: "name",
+    header: "Name",
+    cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
   },
   {
-    accessorKey: 'email',
+    accessorKey: "email",
     header: ({ column }) => {
       return (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Email
           <ArrowUpDown />
         </Button>
-      )
+      );
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue('email')}</div>,
+    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
   },
   {
-    accessorKey: 'role',
-    header: 'Role',
-    cell: ({ row }) => <div className="capitalize">{row.getValue('role')}</div>,
+    accessorKey: "role",
+    header: "Role",
+    cell: ({ row }) => <div className="capitalize">{row.getValue("role")}</div>,
   },
   {
-    id: 'actions',
+    id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const admin = row.original
+      const admin = row.original;
 
       return (
         <DropdownMenu>
@@ -202,28 +202,28 @@ export const columns: ColumnDef<Administrator>[] = [
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => console.log('change role: ', admin.id)}
+              onClick={() => console.log("change role: ", admin.id)}
             >
               Change Role
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log('remove: ', admin.id)}>
+            <DropdownMenuItem onClick={() => console.log("remove: ", admin.id)}>
               Remove
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
   },
-]
+];
 
 export function AdministratorsTable() {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
+    [],
+  );
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data,
@@ -242,16 +242,16 @@ export function AdministratorsTable() {
       columnVisibility,
       rowSelection,
     },
-  })
+  });
 
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter emails..."
-          value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
-          onChange={event =>
-            table.getColumn('email')?.setFilterValue(event.target.value)
+          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("email")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -264,18 +264,20 @@ export function AdministratorsTable() {
           <DropdownMenuContent align="end">
             {table
               .getAllColumns()
-              .filter(column => column.getCanHide())
-              .map(column => {
+              .filter((column) => column.getCanHide())
+              .map((column) => {
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
                     className="capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={value => column.toggleVisibility(!!value)}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -283,35 +285,35 @@ export function AdministratorsTable() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map(headerGroup => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map(header => {
+                {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map(row => (
+              table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map(cell => (
+                  {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -332,7 +334,7 @@ export function AdministratorsTable() {
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <div className="space-x-2">
@@ -355,5 +357,5 @@ export function AdministratorsTable() {
         </div>
       </div>
     </div>
-  )
+  );
 }
