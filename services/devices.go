@@ -15,26 +15,35 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const (
+	svcNameDevices = "devices"
+)
+
 // devicesService implements the organizations gRPC service
 type devicesService struct {
 	pbDevices.UnimplementedDevicesServiceServer
 	datastore *dao.Datastore
 	jetStream nats.JetStream
+	logger    *slog.Logger
 }
 
 func NewDevicesService(
 	datastore *dao.Datastore,
 	js nats.JetStreamContext,
+	baseLogger *slog.Logger,
 ) pbDevices.DevicesServiceServer {
+	childLogger := baseLogger.With(slog.String("service", svcNameDevices))
+
 	return &devicesService{
 		datastore: datastore,
 		jetStream: js,
+		logger:    childLogger,
 	}
 }
 
 func (ds *devicesService) Get(ctx context.Context, request *pbDevices.GetDeviceRequest) (*pbDevices.GetDeviceResponse, error) {
 	if request.Id == "" {
-		slog.Error("invalid device id")
+		ds.logger.Error("invalid device id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid device id")
 	}
 	device, err := ds.datastore.Devices.GetDeviceByPredicate(postgres.PredicateID, request.Id)
@@ -102,7 +111,7 @@ func (ds *devicesService) Get(ctx context.Context, request *pbDevices.GetDeviceR
 
 func (ds *devicesService) List(ctx context.Context, request *pbDevices.ListDevicesRequest) (*pbDevices.ListDevicesResponse, error) {
 	if request.OrganizationId == "" {
-		slog.Error("invalid organization id")
+		ds.logger.Error("invalid organization id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid organization id")
 	}
 
@@ -115,7 +124,7 @@ func (ds *devicesService) List(ctx context.Context, request *pbDevices.ListDevic
 	}
 
 	response := &pbDevices.ListDevicesResponse{
-		Devices: make([]*pbDevices.GetDeviceResponse, len(devices)),
+		Devices: make([]*pbDevices.GetDeviceResponse, 0, len(devices)),
 	}
 
 	for _, device := range devices {
@@ -177,23 +186,23 @@ func (ds *devicesService) List(ctx context.Context, request *pbDevices.ListDevic
 // Update expects all fields provided
 func (ds *devicesService) Update(ctx context.Context, request *pbDevices.UpdateDeviceRequest) (*pbDevices.Empty, error) {
 	if request.Id == "" {
-		slog.Error("invalid device id")
+		ds.logger.Error("invalid device id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid device id")
 	}
 	if request.OsUniqueIdentifier == "" {
-		slog.Error("invalid os_unique_identifier")
+		ds.logger.Error("invalid os_unique_identifier")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid os_unique_identifier")
 	}
 	if request.ClientCertPem == "" {
-		slog.Error("invalid client_cert_pem id")
+		ds.logger.Error("invalid client_cert_pem id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid client_cert_pem id")
 	}
 	if request.ClientCertFingerprint == "" {
-		slog.Error("invalid client_cert_fingerprint id")
+		ds.logger.Error("invalid client_cert_fingerprint id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid client_cert_fingerprint id")
 	}
 	if request.OrganizationId == "" {
-		slog.Error("invalid organization_id id")
+		ds.logger.Error("invalid organization_id id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid organization_id id")
 	}
 	device := &dao.Device{

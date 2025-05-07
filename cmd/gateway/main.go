@@ -19,6 +19,7 @@ import (
 
 	"github.com/danielhoward314/packet-sentry/middleware"
 	pbAccounts "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+	pbAdministrators "github.com/danielhoward314/packet-sentry/protogen/golang/administrators"
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
@@ -72,6 +73,12 @@ func main() {
 	err = pbOrgs.RegisterOrganizationsServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the organizations service handler: %v", err)
+	}
+
+	logger.Info("registering administrators service on gateway mux")
+	err = pbAdministrators.RegisterAdministratorsServiceHandler(ctx, mux, conn)
+	if err != nil {
+		log.Fatalf("failed to register the administrators service handler: %v", err)
 	}
 
 	logger.Info("registering devices service on gateway mux")

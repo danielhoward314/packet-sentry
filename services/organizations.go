@@ -12,23 +12,32 @@ import (
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 )
 
+const (
+	svcNameOrganizations = "organizations"
+)
+
 // organizationsService implements the organizations gRPC service
 type organizationsService struct {
 	pbOrgs.UnimplementedOrganizationsServiceServer
 	datastore *dao.Datastore
+	logger    *slog.Logger
 }
 
 func NewOrganizationsService(
 	datastore *dao.Datastore,
+	baseLogger *slog.Logger,
 ) pbOrgs.OrganizationsServiceServer {
+	childLogger := baseLogger.With(slog.String("service", svcNameOrganizations))
+
 	return &organizationsService{
 		datastore: datastore,
+		logger:    childLogger,
 	}
 }
 
 func (os *organizationsService) Get(ctx context.Context, request *pbOrgs.GetOrganizationRequest) (*pbOrgs.GetOrganizationResponse, error) {
 	if request.Id == "" {
-		slog.Error("invalid organization id")
+		os.logger.Error("invalid organization id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid organization id")
 	}
 	org, err := os.datastore.Organizations.Read(request.Id)

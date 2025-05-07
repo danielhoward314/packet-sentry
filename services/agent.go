@@ -58,7 +58,7 @@ func (as *agentService) ReportInterfaces(ctx context.Context, req *pbAgent.Repor
 		return nil, status.Errorf(codes.Internal, "%s", fmt.Sprintf("device record nil when selected by os_unique_identifier: %s", osUniqueIdentifier))
 	}
 
-	interfaces := make([]string, len(req.Interfaces))
+	interfaces := make([]string, 0, len(req.Interfaces))
 
 	for _, iface := range req.Interfaces {
 		logger.Info("received interface name", psLog.KeyDeviceName, iface.Name)
@@ -123,7 +123,7 @@ func (as *agentService) PollCommand(ctx context.Context, req *pbAgent.Empty) (*p
 	if len(commands) > 0 {
 		logger.Info("sending commands received from NATS stream")
 
-		pbCmds := make([]*pbAgent.Command, len(commands))
+		pbCmds := make([]*pbAgent.Command, 0, len(commands))
 		for _, cmdStr := range commands {
 			pbCmds = append(pbCmds, &pbAgent.Command{
 				Name: cmdStr,

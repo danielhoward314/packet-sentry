@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package administrators;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/administrators";
+
+import "google/api/annotations.proto";
+
+service AdministratorsService {
+    rpc Create(CreateAdministratorRequest) returns (Empty) {
+        option (google.api.http) = {
+            post: "/v1/administrators"
+        };
+    }
+    rpc Activate(ActivateAdministratorsRequest) returns (Empty) {
+        option (google.api.http) = {
+            post: "/v1/administrators/activate"
+        };
+    }
+    rpc Get(GetAdministratorRequest) returns (GetAdministratorResponse) {
+        option (google.api.http) = {
+            get: "/v1/administrators/{id}"
+        };
+    }
+    rpc List(ListAdministratorsRequest) returns (ListAdministratorsResponse) {
+        option (google.api.http) = {
+            get: "/v1/administrators"
+        };
+    }
+    rpc Update (UpdateAdministratorRequest) returns (Empty) {
+        option (google.api.http) = {
+            put: "/v1/administrators/{id}"
+            body: "*"
+        };
+    }
+    rpc Delete(DeleteAdministratorRequest) returns (Empty) {
+        option (google.api.http) = {
+            delete: "/v1/administrators/{id}"
+        };
+    }
+}
+
+message Empty {}
+
+message CreateAdministratorRequest {
+    string organization_id = 1;
+    string email = 2;
+    string display_name = 3;
+    string authorization_role = 4;
+}
+
+message ActivateAdministratorsRequest {
+    string token = 1;
+    string verification_code = 2;
+    string password = 3;
+}
+
+message GetAdministratorRequest {
+    string id = 1;
+}
+
+message ListAdministratorsRequest {
+    string organization_id = 1;
+}
+
+message UpdateAdministratorRequest {
+    string id = 1;
+    string email = 2;
+    string authorization_role = 3;
+    string display_name = 4;
+}
+
+message DeleteAdministratorRequest {
+    string id = 1;
+}
+
+message GetAdministratorResponse {
+	string id = 1;
+    string email = 2;
+	string display_name = 3;
+    string organization_id = 4;
+    bool verified = 5;
+    string authorization_role = 6;
+}
+
+message ListAdministratorsResponse {
+    repeated GetAdministratorResponse administrators = 1;
+}

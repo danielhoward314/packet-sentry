@@ -39,7 +39,7 @@ func NewAdministrators(db *sql.DB) dao.Administrators {
 	return &administrators{db: db}
 }
 
-func (o *administrators) Create(administrator *dao.Administrator, primaryAdministratorCleartextPassword string) (string, error) {
+func (a *administrators) Create(administrator *dao.Administrator, primaryAdministratorCleartextPassword string) (string, error) {
 	if administrator == nil {
 		return "", errors.New("invalid administrator")
 	}
@@ -60,7 +60,7 @@ func (o *administrators) Create(administrator *dao.Administrator, primaryAdminis
 		return "", err
 	}
 	var id string
-	err = o.db.QueryRow(
+	err = a.db.QueryRow(
 		queries.AdministratorsInsert,
 		administrator.Email,
 		administrator.DisplayName,
@@ -75,9 +75,9 @@ func (o *administrators) Create(administrator *dao.Administrator, primaryAdminis
 	return id, nil
 }
 
-func (o *administrators) Read(id string) (*dao.Administrator, error) {
+func (a *administrators) Read(id string) (*dao.Administrator, error) {
 	administrator := &dao.Administrator{}
-	err := o.db.QueryRow(queries.AdministratorsSelect, id).Scan(
+	err := a.db.QueryRow(queries.AdministratorsSelect, id).Scan(
 		&administrator.ID,
 		&administrator.Email,
 		&administrator.DisplayName,
@@ -93,9 +93,9 @@ func (o *administrators) Read(id string) (*dao.Administrator, error) {
 	return administrator, nil
 }
 
-func (o *administrators) ReadByEmail(email string) (*dao.Administrator, error) {
+func (a *administrators) ReadByEmail(email string) (*dao.Administrator, error) {
 	administrator := &dao.Administrator{}
-	err := o.db.QueryRow(queries.AdministratorsSelectByEmail, email).Scan(
+	err := a.db.QueryRow(queries.AdministratorsSelectByEmail, email).Scan(
 		&administrator.ID,
 		&administrator.Email,
 		&administrator.DisplayName,
@@ -111,11 +111,44 @@ func (o *administrators) ReadByEmail(email string) (*dao.Administrator, error) {
 	return administrator, nil
 }
 
-func (o *administrators) Update(administrator *dao.Administrator) error {
+func (a *administrators) List(organizationID string) ([]*dao.Administrator, error) {
+	if organizationID == "" {
+		return nil, errors.New("empty organization id")
+	}
+
+	var administrators []*dao.Administrator
+	rows, rowsErr := a.db.Query(queries.AdministratorsSelectByOrganizationID, organizationID)
+	if rowsErr != nil {
+		return nil, rowsErr
+	}
+
+	for rows.Next() {
+		var administrator dao.Administrator
+		rowErr := rows.Scan(
+			&administrator.ID,
+			&administrator.Email,
+			&administrator.DisplayName,
+			&administrator.PasswordHashType,
+			&administrator.PasswordHash,
+			&administrator.OrganizationID,
+			&administrator.Verified,
+			&administrator.AuthorizationRole,
+		)
+		if rowErr != nil {
+			return nil, rowErr
+		}
+
+		administrators = append(administrators, &administrator)
+	}
+
+	return administrators, nil
+}
+
+func (a *administrators) Update(administrator *dao.Administrator) error {
 	if administrator == nil {
 		return errors.New("invalid administrator")
 	}
-	_, err := o.db.Exec(
+	_, err := a.db.Exec(
 		queries.AdministratorsUpdate,
 		administrator.Email,
 		administrator.DisplayName,
@@ -132,6 +165,16 @@ func (o *administrators) Update(administrator *dao.Administrator) error {
 	return nil
 }
 
-// func (o *administrators) Delete(id string) (*dao.Administrator, error) {
-// 	return nil, nil
-// }
+func (a *administrators) Delete(id string) (int64, error) {
+	result, err := a.db.Exec(queries.AdministratorsDelete, id)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsDeleted, nil
+}

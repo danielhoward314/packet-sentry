@@ -14,3 +14,4 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 SMTP_HOST=maildev
 SMTP_PORT=1025
+WEB_CONSOLE_URL=http://web-console.packet-sentry.local

@@ -1,12 +1,23 @@
 package queries
 
-const AdministratorsInsert = `INSERT INTO administrators (email, display_name, organization_id, password_hash_type, password_hash, authorization_role)
+const AdministratorsInsert = `INSERT INTO administrators (
+    email, display_name, organization_id,
+    password_hash_type, password_hash, authorization_role
+)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id`
 
-const AdministratorsSelect = `SELECT id, email, display_name, password_hash_type, password_hash, organization_id, verified, authorization_role FROM administrators where id = $1`
+const AdministratorsSelect = `SELECT
+    id, email, display_name, password_hash_type, password_hash,
+    organization_id, verified, authorization_role
+FROM administrators
+WHERE id = $1`
 
-const AdministratorsSelectByEmail = `SELECT id, email, display_name, password_hash_type, password_hash, organization_id, verified, authorization_role FROM administrators where email = $1`
+const AdministratorsSelectByEmail = `SELECT
+    id, email, display_name, password_hash_type, password_hash,
+    organization_id, verified, authorization_role
+FROM administrators
+WHERE email = $1`
 
 const AdministratorsUpdate = `UPDATE administrators
 SET
@@ -20,3 +31,11 @@ SET
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $8
 `
+
+const AdministratorsSelectByOrganizationID = `SELECT
+    id, email, display_name, password_hash_type, password_hash,
+    organization_id, verified, authorization_role
+FROM administrators
+WHERE organization_id = $1`
+
+const AdministratorsDelete = `DELETE FROM administrators where id = $1`

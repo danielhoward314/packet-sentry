@@ -19,13 +19,15 @@ import (
 )
 
 const (
-	emailFrom = "no.reply@packet-sentry.com"
+	emailFrom       = "no.reply@packet-sentry.com"
+	svcNameAccounts = "accounts"
 )
 
 // accountsService implements the account gRPC service
 type accountsService struct {
 	pbAccounts.UnimplementedAccountsServiceServer
 	datastore             *dao.Datastore
+	logger                *slog.Logger
 	registrationDatastore dao.RegistrationDatastore
 	tokenDatastore        dao.TokenDatastore
 	smtpDialer            *gomail.Dialer
@@ -33,12 +35,16 @@ type accountsService struct {
 
 func NewAccountsService(
 	datastore *dao.Datastore,
+	baseLogger *slog.Logger,
 	registrationDatastore dao.RegistrationDatastore,
 	tokenDatastore dao.TokenDatastore,
 	smtpDialer *gomail.Dialer,
 ) pbAccounts.AccountsServiceServer {
+	childLogger := baseLogger.With(slog.String("service", svcNameAccounts))
+
 	return &accountsService{
 		datastore:             datastore,
+		logger:                childLogger,
 		registrationDatastore: registrationDatastore,
 		tokenDatastore:        tokenDatastore,
 		smtpDialer:            smtpDialer,
@@ -48,29 +54,29 @@ func NewAccountsService(
 // Signup creates a new organization and admin, and triggers primary admin email verification
 func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.SignupRequest) (*pbAccounts.SignupResponse, error) {
 	if request.OrganizationName == "" {
-		slog.Error("invalid organization name")
+		as.logger.Error("invalid organization name")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid organization name")
 	}
 	if request.PrimaryAdministratorEmail == "" {
-		slog.Error("invalid primary administrator email")
+		as.logger.Error("invalid primary administrator email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator email")
 	}
 	if request.PrimaryAdministratorName == "" {
-		slog.Error("invalid primary administrator name")
+		as.logger.Error("invalid primary administrator name")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator name")
 	}
 	if request.PrimaryAdministratorCleartextPassword == "" {
-		slog.Error("invalid primary administrator cleartext password")
+		as.logger.Error("invalid primary administrator cleartext password")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid primary administrator cleartext password")
 	}
 	organization := &dao.Organization{
 		Name:                      request.OrganizationName,
 		PrimaryAdministratorEmail: request.PrimaryAdministratorEmail,
 	}
-	slog.Info("creating organization")
+	as.logger.Info("creating organization")
 	organizationID, err := as.datastore.Organizations.Create(organization)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to create organization")
 	}
 	administrator := &dao.Administrator{
@@ -79,19 +85,19 @@ func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.Signu
 		OrganizationID:    organizationID,
 		AuthorizationRole: postgres.PrimaryAdmin,
 	}
-	slog.Info("creating primary administrator", "organization_id", organizationID)
+	as.logger.Info("creating primary administrator", "organization_id", organizationID)
 	administratorID, err := as.datastore.Administrators.Create(administrator, request.PrimaryAdministratorCleartextPassword)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to create administrator")
 	}
-	slog.Info("creating registration data", "organization_id", organizationID, "administrator_id", administratorID)
+	as.logger.Info("creating registration data", "organization_id", organizationID, "administrator_id", administratorID)
 	token, emailCode, err := as.registrationDatastore.Create(&dao.Registration{
 		OrganizationID:  organizationID,
 		AdministratorID: administratorID,
 	})
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to create registration")
 	}
 	emailTemplateData := struct {
@@ -99,16 +105,16 @@ func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.Signu
 	}{
 		Code: emailCode,
 	}
-	slog.Info("parsing verification email template")
+	as.logger.Info("parsing verification email template")
 	tmpl, err := template.ParseFiles("templates/verify_email.html")
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to parse registration email template %s", err.Error())
 	}
 	var body bytes.Buffer
-	slog.Info("executing verification email template")
+	as.logger.Info("executing verification email template")
 	err = tmpl.Execute(&body, emailTemplateData)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to executing registration email template %s", err.Error())
 	}
 
@@ -117,10 +123,10 @@ func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.Signu
 	m.SetHeader("To", request.PrimaryAdministratorEmail)
 	m.SetHeader("Subject", "Packet Sentry: Verify your email")
 	m.SetBody("text/html", body.String())
-	slog.Info("sending verification email")
+	as.logger.Info("sending verification email")
 	err = as.smtpDialer.DialAndSend(m)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to send administrator email verification email %s", err.Error())
 	}
 	return &pbAccounts.SignupResponse{
@@ -131,11 +137,11 @@ func (as *accountsService) Signup(ctx context.Context, request *pbAccounts.Signu
 // Verify validates email verification codes, updates the administrators.verified column & creates admin UI & API JWTs
 func (as *accountsService) Verify(ctx context.Context, request *pbAccounts.VerificationRequest) (*pbAccounts.VerificationResponse, error) {
 	if request.Token == "" {
-		slog.Error("invalid token")
+		as.logger.Error("invalid token")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid token")
 	}
 	if request.VerificationCode == "" {
-		slog.Error("invalid verification code")
+		as.logger.Error("invalid verification code")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid verification code")
 	}
 	registration, err := as.registrationDatastore.Read(request.Token)
@@ -163,7 +169,7 @@ func (as *accountsService) Verify(ctx context.Context, request *pbAccounts.Verif
 	err = as.registrationDatastore.Delete(request.Token)
 	if err != nil {
 		// non-fatal error, the registration data has a short TTL
-		slog.Warn("failed to delete registration data")
+		as.logger.Warn("failed to delete registration data")
 	}
 	adminUIAccessToken, err := as.tokenDatastore.Create(
 		&dao.TokenData{

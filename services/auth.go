@@ -18,10 +18,15 @@ import (
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 )
 
+const (
+	svcNameAuth = "auth"
+)
+
 // authService implements the account gRPC service
 type authService struct {
 	pbAuth.UnimplementedAuthServiceServer
 	datastore             *dao.Datastore
+	logger                *slog.Logger
 	registrationDatastore dao.RegistrationDatastore
 	tokenDatastore        dao.TokenDatastore
 	smtpDialer            *gomail.Dialer
@@ -29,12 +34,16 @@ type authService struct {
 
 func NewAuthService(
 	datastore *dao.Datastore,
+	baseLogger *slog.Logger,
 	registrationDatastore dao.RegistrationDatastore,
 	tokenDatastore dao.TokenDatastore,
 	smtpDialer *gomail.Dialer,
 ) pbAuth.AuthServiceServer {
+	childLogger := baseLogger.With(slog.String("service", svcNameAuth))
+
 	return &authService{
 		datastore:             datastore,
+		logger:                childLogger,
 		registrationDatastore: registrationDatastore,
 		tokenDatastore:        tokenDatastore,
 		smtpDialer:            smtpDialer,
@@ -44,7 +53,7 @@ func NewAuthService(
 // ValidateSession validates admin ui session data submitted via a JWT in the request
 func (as *authService) ValidateSession(ctx context.Context, request *pbAuth.ValidateSessionRequest) (*pbAuth.ValidateSessionResponse, error) {
 	if request.Jwt == "" {
-		slog.Error("invalid session JWT")
+		as.logger.Error("invalid session JWT")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid session JWT")
 	}
 	sessionTokenData, err := as.tokenDatastore.Read(request.Jwt)
@@ -81,11 +90,11 @@ func (as *authService) ValidateSession(ctx context.Context, request *pbAuth.Vali
 
 func (as *authService) Login(ctx context.Context, request *pbAuth.LoginRequest) (*pbAuth.LoginResponse, error) {
 	if request.Email == "" {
-		slog.Error("invalid email")
+		as.logger.Error("invalid email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid email")
 	}
 	if request.Password == "" {
-		slog.Error("invalid password")
+		as.logger.Error("invalid password")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid password")
 	}
 	administrator, err := as.datastore.Administrators.ReadByEmail(request.Email)
@@ -181,7 +190,7 @@ func (as *authService) Login(ctx context.Context, request *pbAuth.LoginRequest) 
 // RefreshToken takes in a refesh JWT of a given claims type and, if valid, returns a new access JWT of the same claims type
 func (as *authService) RefreshToken(ctx context.Context, request *pbAuth.RefreshTokenRequest) (*pbAuth.RefreshTokenResponse, error) {
 	if request.Jwt == "" {
-		slog.Error("invalid refresh JWT")
+		as.logger.Error("invalid refresh JWT")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid refresh JWT")
 	}
 	claimsType, err := psJWT.GetClaimsTypeFromProtoEnum(request.ClaimsType)
@@ -220,7 +229,7 @@ func (as *authService) RefreshToken(ctx context.Context, request *pbAuth.Refresh
 
 func (as *authService) CreateInstallKey(ctx context.Context, request *pbAuth.CreateInstallKeyRequest) (*pbAuth.CreateInstallKeyResponse, error) {
 	if request.AdministratorEmail == "" {
-		slog.Error("invalid administrator email")
+		as.logger.Error("invalid administrator email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid administrator email")
 	}
 
@@ -245,7 +254,7 @@ func (as *authService) CreateInstallKey(ctx context.Context, request *pbAuth.Cre
 
 func (as *authService) ResetVerify(ctx context.Context, request *pbAuth.ResetVerifyRequest) (*pbAuth.Empty, error) {
 	if request.Email == "" {
-		slog.Error("invalid administrator email")
+		as.logger.Error("invalid administrator email")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid administrator email")
 	}
 	administrator, err := as.datastore.Administrators.ReadByEmail(request.Email)
@@ -258,13 +267,13 @@ func (as *authService) ResetVerify(ctx context.Context, request *pbAuth.ResetVer
 	if !administrator.Verified {
 		return nil, status.Errorf(codes.PermissionDenied, "administrator email not verified")
 	}
-	slog.Info("creating registration data", "organization_id", administrator.OrganizationID, "administrator_id", administrator.ID)
+	as.logger.Info("creating registration data", "organization_id", administrator.OrganizationID, "administrator_id", administrator.ID)
 	token, _, err := as.registrationDatastore.Create(&dao.Registration{
 		OrganizationID:  administrator.OrganizationID,
 		AdministratorID: administrator.ID,
 	})
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to create reset password email token")
 	}
 	emailTemplateData := struct {
@@ -272,16 +281,16 @@ func (as *authService) ResetVerify(ctx context.Context, request *pbAuth.ResetVer
 	}{
 		Code: token,
 	}
-	slog.Info("parsing password reset verification email template")
+	as.logger.Info("parsing password reset verification email template")
 	tmpl, err := template.ParseFiles("templates/forgot_password.html")
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to parse registration email template %s", err.Error())
 	}
 	var body bytes.Buffer
-	slog.Info("executing password reset verification email template")
+	as.logger.Info("executing password reset verification email template")
 	err = tmpl.Execute(&body, emailTemplateData)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to executing registration email template %s", err.Error())
 	}
 
@@ -290,10 +299,10 @@ func (as *authService) ResetVerify(ctx context.Context, request *pbAuth.ResetVer
 	m.SetHeader("To", request.Email)
 	m.SetHeader("Subject", "Packet Sentry: Reset password request")
 	m.SetBody("text/html", body.String())
-	slog.Info("sending password reset verification email")
+	as.logger.Info("sending password reset verification email")
 	err = as.smtpDialer.DialAndSend(m)
 	if err != nil {
-		slog.Error(err.Error())
+		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to send administrator email password reset verification email %s", err.Error())
 	}
 	return &pbAuth.Empty{}, nil
@@ -301,23 +310,23 @@ func (as *authService) ResetVerify(ctx context.Context, request *pbAuth.ResetVer
 
 func (as *authService) ResetPassword(ctx context.Context, request *pbAuth.ResetPasswordRequest) (*pbAuth.Empty, error) {
 	if request.Identifier == "" {
-		slog.Error("invalid identifier")
+		as.logger.Error("invalid identifier")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identifier")
 	}
 	if request.Credential == "" {
-		slog.Error("invalid credential")
+		as.logger.Error("invalid credential")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid credential")
 	}
 	if request.NewPassword == "" {
-		slog.Error("invalid new password")
+		as.logger.Error("invalid new password")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid new password")
 	}
 	if request.ConfirmNewPassword == "" {
-		slog.Error("invalid new password confirmation")
+		as.logger.Error("invalid new password confirmation")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid new password confirmation")
 	}
 	if request.NewPassword != request.ConfirmNewPassword {
-		slog.Error("mismatch of new password and confirmation")
+		as.logger.Error("mismatch of new password and confirmation")
 		return nil, status.Errorf(codes.InvalidArgument, "mismatch of new password and confirmation")
 	}
 	var administrator *dao.Administrator
@@ -342,7 +351,7 @@ func (as *authService) ResetPassword(ctx context.Context, request *pbAuth.ResetP
 			return nil, status.Errorf(codes.Internal, "failed to read administrator data: %s", err.Error())
 		}
 	default:
-		slog.Error("invalid identifier type")
+		as.logger.Error("invalid identifier type")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identifier type")
 	}
 
@@ -369,10 +378,10 @@ func (as *authService) ResetPassword(ctx context.Context, request *pbAuth.ResetP
 		err = as.registrationDatastore.Delete(request.Credential)
 		if err != nil {
 			// non-fatal error, the registration data has a short TTL
-			slog.Warn("failed to delete registration data during password reset")
+			as.logger.Warn("failed to delete registration data during password reset")
 		}
 	default:
-		slog.Error("invalid credential type")
+		as.logger.Error("invalid credential type")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid credential type")
 	}
 	passwordHash, err := hashes.HashCleartextWithBCrypt(request.NewPassword)

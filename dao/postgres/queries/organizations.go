@@ -5,4 +5,7 @@ VALUES ($1, $2, $3)
 RETURNING id
 `
 
-const OrganizationsSelect = `SELECT id, primary_administrator_email, name, billing_plan_type FROM organizations where id = $1`
+const OrganizationsSelect = `SELECT
+	id, primary_administrator_email, name, billing_plan_type
+FROM organizations
+WHERE id = $1`

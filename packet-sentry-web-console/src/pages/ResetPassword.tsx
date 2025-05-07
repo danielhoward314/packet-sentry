@@ -32,11 +32,11 @@ export default function ResetPasswordPage() {
       return;
     }
     if (!adminUser?.id) {
-      console.log('admin user not in context, refreshing')
-      refreshAdminUser()
+      console.log("admin user not in context, refreshing");
+      refreshAdminUser();
       if (!adminUser?.id) {
-        console.error('admin user not in context after refresh')
-        return
+        console.error("admin user not in context after refresh");
+        return;
       }
     }
 

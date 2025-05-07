@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { AlertCircle, ArrowUpDown, ChevronDown, Loader2, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,108 +35,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { GetAdministratorResponse } from "@/types/api";
+import { listAdministrators } from "@/lib/api";
+import { useAdminUser } from "@/contexts/AdminUserContext";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
-const data: Administrator[] = [
-  {
-    id: "m5gr84i9",
-    role: "Primary",
-    name: "First Last",
-    email: "ken99@example.com",
-  },
-  {
-    id: "3u1reuv4",
-    role: "Primary",
-    name: "First Last",
-    email: "Abe45@example.com",
-  },
-  {
-    id: "derv1ws0",
-    role: "Primary",
-    name: "First Last",
-    email: "Monserrat44@example.com",
-  },
-  {
-    id: "5kma53ae",
-    role: "Primary",
-    name: "First Last",
-    email: "Silas22@example.com",
-  },
-  {
-    id: "bhqecj4p",
-    role: "Primary",
-    name: "First Last",
-    email: "carmella@example.com",
-  },
-  {
-    id: "m5gr84i9",
-    role: "Primary",
-    name: "First Last",
-    email: "ken99@example.com",
-  },
-  {
-    id: "3u1reuv4",
-    role: "Primary",
-    name: "First Last",
-    email: "Abe45@example.com",
-  },
-  {
-    id: "derv1ws0",
-    role: "Primary",
-    name: "First Last",
-    email: "Monserrat44@example.com",
-  },
-  {
-    id: "5kma53ae",
-    role: "Primary",
-    name: "First Last",
-    email: "Silas22@example.com",
-  },
-  {
-    id: "bhqecj4p",
-    role: "Primary",
-    name: "First Last",
-    email: "carmella@example.com",
-  },
-  {
-    id: "m5gr84i9",
-    role: "Primary",
-    name: "First Last",
-    email: "ken99@example.com",
-  },
-  {
-    id: "3u1reuv4",
-    role: "Primary",
-    name: "First Last",
-    email: "Abe45@example.com",
-  },
-  {
-    id: "derv1ws0",
-    role: "Primary",
-    name: "First Last",
-    email: "Monserrat44@example.com",
-  },
-  {
-    id: "5kma53ae",
-    role: "Primary",
-    name: "First Last",
-    email: "Silas22@example.com",
-  },
-  {
-    id: "bhqecj4p",
-    role: "Primary",
-    name: "First Last",
-    email: "carmella@example.com",
-  },
-];
-
-export type Administrator = {
-  id: string;
-  role: "Primary" | "Secondary";
-  name: string;
-  email: string;
-};
-
-export const columns: ColumnDef<Administrator>[] = [
+export const columns: ColumnDef<GetAdministratorResponse>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -160,9 +64,9 @@ export const columns: ColumnDef<Administrator>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "name",
+    accessorKey: "displayName",
     header: "Name",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
+    cell: ({ row }) => <div className="capitalize">{row.getValue("displayName")}</div>,
   },
   {
     accessorKey: "email",
@@ -177,12 +81,12 @@ export const columns: ColumnDef<Administrator>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
+    cell: ({ row }) => <div>{row.getValue("email")}</div>,
   },
   {
-    accessorKey: "role",
+    accessorKey: "authorizationRole",
     header: "Role",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("role")}</div>,
+    cell: ({ row }) => <div>{row.getValue("authorizationRole")}</div>,
   },
   {
     id: "actions",
@@ -217,6 +121,10 @@ export const columns: ColumnDef<Administrator>[] = [
 ];
 
 export function AdministratorsTable() {
+  const [data, setData] = React.useState<GetAdministratorResponse[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const { adminUser, refreshAdminUser } = useAdminUser();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -224,6 +132,31 @@ export function AdministratorsTable() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  React.useEffect(() => {
+    if (!adminUser?.id) {
+      console.log("admin user not in context, refreshing");
+      refreshAdminUser();
+      if (!adminUser?.id) {
+        console.error("admin user not in context after refresh");
+        return;
+      }
+    }
+
+    const fetchData = async () => {
+      try {
+        const responseData = await listAdministrators(adminUser.organizationId);
+        setData(responseData?.administrators ?? []);
+      } catch (err) {
+        setError("Failed to load administrators");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [adminUser?.organizationId]);
 
   const table = useReactTable({
     data,
@@ -243,6 +176,25 @@ export function AdministratorsTable() {
       rowSelection,
     },
   });
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load administrators in your organization.
+        </AlertDescription>
+      </Alert>
+    )
+  }
 
   return (
     <div className="w-full">

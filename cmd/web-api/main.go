@@ -24,6 +24,7 @@ import (
 	psPostgres "github.com/danielhoward314/packet-sentry/dao/postgres"
 	psRedis "github.com/danielhoward314/packet-sentry/dao/redis"
 	pbAccounts "github.com/danielhoward314/packet-sentry/protogen/golang/accounts"
+	pbAdministrators "github.com/danielhoward314/packet-sentry/protogen/golang/administrators"
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
@@ -74,6 +75,11 @@ func main() {
 		Addr: redisAddr,
 		DB:   0, // use default DB
 	})
+
+	webConsoleURL := os.Getenv("WEB_CONSOLE_URL")
+	if webConsoleURL == "" {
+		log.Fatal("error: WEB_CONSOLE_URL is empty")
+	}
 
 	logger.Info("connecting to SMTP server")
 	smtpHost := os.Getenv("SMTP_HOST")
@@ -141,13 +147,23 @@ func main() {
 	// TODO: inject context into all of the services
 	accountSvc := services.NewAccountsService(
 		datastore,
+		logger,
 		registrationDatastore,
 		tokenDatastore,
 		smtpDialer,
 	)
 
+	administratorsSvc := services.NewAdministratorsService(
+		datastore,
+		logger,
+		registrationDatastore,
+		smtpDialer,
+		webConsoleURL,
+	)
+
 	authSvc := services.NewAuthService(
 		datastore,
+		logger,
 		registrationDatastore,
 		tokenDatastore,
 		smtpDialer,
@@ -155,11 +171,17 @@ func main() {
 
 	organizationsSvc := services.NewOrganizationsService(
 		datastore,
+		logger,
 	)
 
-	devicesSvc := services.NewDevicesService(datastore, js)
+	devicesSvc := services.NewDevicesService(
+		datastore,
+		js,
+		logger,
+	)
 
 	pbAccounts.RegisterAccountsServiceServer(server, accountSvc)
+	pbAdministrators.RegisterAdministratorsServiceServer(server, administratorsSvc)
 	pbAuth.RegisterAuthServiceServer(server, authSvc)
 	pbOrgs.RegisterOrganizationsServiceServer(server, organizationsSvc)
 	pbDevices.RegisterDevicesServiceServer(server, devicesSvc)

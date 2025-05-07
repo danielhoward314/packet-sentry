@@ -83,3 +83,18 @@ export interface ResetPasswordRequest {
   newPassword: string;
   confirmNewPassword: string;
 }
+
+export interface UpdateAdministratorRequest {
+  email: string;
+  displayName: string;
+  authorizationRole: string;
+}
+
+export type GetAdministratorResponse = {
+  id: string;
+  email: string;
+  displayName: string;
+  organizationId: string;
+  verified: boolean;
+  authorizationRole: "PRIMARY_ADMIN" | "SECONDARY_ADMIN";
+};

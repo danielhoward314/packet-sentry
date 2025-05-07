@@ -28,25 +28,27 @@ export function AdminUserProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const parsedTokenPayload = parseJwt(accessToken);
-      const id = parsedTokenPayload?.sub ?? ''
-      const authorizationRole = parsedTokenPayload?.authorization_role ?? ''
-      const organizationId = parsedTokenPayload?.organization_id ?? ''
+      const id = parsedTokenPayload?.sub ?? "";
+      const authorizationRole = parsedTokenPayload?.authorization_role ?? "";
+      const organizationId = parsedTokenPayload?.organization_id ?? "";
       setAdminUser({
         id,
         authorizationRole,
         organizationId,
-      })
+      });
     } catch (e) {
       console.error("Failed to parse JWT:", e);
     }
-  }
+  };
 
   useEffect(() => {
     refreshAdminUser();
   }, []);
 
   return (
-    <AdminUserContext.Provider value={{ adminUser, refreshAdminUser, setAdminUser }}>
+    <AdminUserContext.Provider
+      value={{ adminUser, refreshAdminUser, setAdminUser }}
+    >
       {children}
     </AdminUserContext.Provider>
   );
