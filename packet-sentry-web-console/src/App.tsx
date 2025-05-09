@@ -25,6 +25,10 @@ import Billing from "./pages/Billing";
 import ResetPassword from "./pages/ResetPassword";
 import AdministratorsList from "./pages/AdministratorsList";
 import { AdminUserProvider } from "./contexts/AdminUserContext";
+import NewAdministrator from "./pages/NewAdministrator";
+import { AxiosInterceptorProvider } from "@/contexts/AxiosProvider";
+import UpdateAdministrator from "./pages/UpdateAdministrator";
+import ActivateAdministrator from "./pages/ActivateAdministrator";
 
 function App() {
   return (
@@ -37,6 +41,7 @@ function App() {
         <Toaster />
         <AuthProvider>
           <Router>
+            <AxiosInterceptorProvider />
             <Routes>
               <Route path="/" element={<Navigate to="/home" />} />
 
@@ -67,6 +72,15 @@ function App() {
               />
 
               <Route
+                path="/activate"
+                element={
+                  <UnauthenticatedRoute>
+                    <ActivateAdministrator />
+                  </UnauthenticatedRoute>
+                }
+              />
+
+              <Route
                 path="/"
                 element={
                   <AuthenticatedRoute>
@@ -80,6 +94,14 @@ function App() {
                 <Route path="devices/list" element={<DevicesList />} />
                 <Route path="devices/new" element={<NewDevice />} />
                 <Route path="administrators" element={<AdministratorsList />} />
+                <Route
+                  path="administrators/new"
+                  element={<NewAdministrator />}
+                />
+                <Route
+                  path="administrators/update/:id"
+                  element={<UpdateAdministrator />}
+                />
                 <Route path="billing" element={<Billing />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="reset-password" element={<ResetPassword />} />

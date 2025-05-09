@@ -13,7 +13,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { AlertCircle, ArrowUpDown, ChevronDown, Loader2, MoreHorizontal } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowUpDown,
+  ChevronDown,
+  Loader2,
+  MoreHorizontal,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,89 +44,11 @@ import {
 import { GetAdministratorResponse } from "@/types/api";
 import { listAdministrators } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-
-export const columns: ColumnDef<GetAdministratorResponse>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "displayName",
-    header: "Name",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("displayName")}</div>,
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Email
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue("email")}</div>,
-  },
-  {
-    accessorKey: "authorizationRole",
-    header: "Role",
-    cell: ({ row }) => <div>{row.getValue("authorizationRole")}</div>,
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const admin = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => console.log("change role: ", admin.id)}
-            >
-              Change Role
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("remove: ", admin.id)}>
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useNavigate } from "react-router-dom";
 
 export function AdministratorsTable() {
+  const navigate = useNavigate();
   const [data, setData] = React.useState<GetAdministratorResponse[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -135,7 +63,6 @@ export function AdministratorsTable() {
 
   React.useEffect(() => {
     if (!adminUser?.id) {
-      console.log("admin user not in context, refreshing");
       refreshAdminUser();
       if (!adminUser?.id) {
         console.error("admin user not in context after refresh");
@@ -157,6 +84,90 @@ export function AdministratorsTable() {
 
     fetchData();
   }, [adminUser?.organizationId]);
+
+  const columns: ColumnDef<GetAdministratorResponse>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "displayName",
+      header: "Name",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("displayName")}</div>
+      ),
+    },
+    {
+      accessorKey: "email",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Email
+            <ArrowUpDown />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div>{row.getValue("email")}</div>,
+    },
+    {
+      accessorKey: "authorizationRole",
+      header: "Role",
+      cell: ({ row }) => <div>{row.getValue("authorizationRole")}</div>,
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const rowAdmin = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    navigate(`/administrators/update/${rowAdmin.id}`)
+                  }
+                >
+                  Update
+                </Button>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
 
   const table = useReactTable({
     data,
@@ -193,7 +204,7 @@ export function AdministratorsTable() {
           Failed to load administrators in your organization.
         </AlertDescription>
       </Alert>
-    )
+    );
   }
 
   return (
@@ -207,6 +218,12 @@ export function AdministratorsTable() {
           }
           className="max-w-sm"
         />
+        <Button
+          className="ml-[10px] xl:ml-auto"
+          onClick={() => navigate("/administrators/new")}
+        >
+          Create New Administrator
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

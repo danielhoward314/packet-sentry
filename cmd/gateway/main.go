@@ -115,6 +115,7 @@ func main() {
 		"/v1/refresh",
 		"/v1/reset-verify",
 		"/v1/passwords",
+		"/v1/activate",
 	}
 	// lists of endpoints that only primary admins are authorized for
 	// the authorization middelware uses the authorization_role claim

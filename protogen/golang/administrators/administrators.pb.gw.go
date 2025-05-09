@@ -35,18 +35,12 @@ var (
 	_ = metadata.Join
 )
 
-var filter_AdministratorsService_Create_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-
 func request_AdministratorsService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client AdministratorsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateAdministratorRequest
 		metadata runtime.ServerMetadata
 	)
-	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_AdministratorsService_Create_0); err != nil {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := client.Create(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -58,28 +52,19 @@ func local_request_AdministratorsService_Create_0(ctx context.Context, marshaler
 		protoReq CreateAdministratorRequest
 		metadata runtime.ServerMetadata
 	)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_AdministratorsService_Create_0); err != nil {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.Create(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_AdministratorsService_Activate_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-
 func request_AdministratorsService_Activate_0(ctx context.Context, marshaler runtime.Marshaler, client AdministratorsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ActivateAdministratorsRequest
 		metadata runtime.ServerMetadata
 	)
-	io.Copy(io.Discard, req.Body)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_AdministratorsService_Activate_0); err != nil {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := client.Activate(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -91,10 +76,7 @@ func local_request_AdministratorsService_Activate_0(ctx context.Context, marshal
 		protoReq ActivateAdministratorsRequest
 		metadata runtime.ServerMetadata
 	)
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_AdministratorsService_Activate_0); err != nil {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.Activate(ctx, &protoReq)
@@ -282,7 +264,7 @@ func RegisterAdministratorsServiceHandlerServer(ctx context.Context, mux *runtim
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/administrators.AdministratorsService/Activate", runtime.WithHTTPPathPattern("/v1/administrators/activate"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/administrators.AdministratorsService/Activate", runtime.WithHTTPPathPattern("/v1/activate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -437,7 +419,7 @@ func RegisterAdministratorsServiceHandlerClient(ctx context.Context, mux *runtim
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/administrators.AdministratorsService/Activate", runtime.WithHTTPPathPattern("/v1/administrators/activate"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/administrators.AdministratorsService/Activate", runtime.WithHTTPPathPattern("/v1/activate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -523,7 +505,7 @@ func RegisterAdministratorsServiceHandlerClient(ctx context.Context, mux *runtim
 
 var (
 	pattern_AdministratorsService_Create_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "administrators"}, ""))
-	pattern_AdministratorsService_Activate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "administrators", "activate"}, ""))
+	pattern_AdministratorsService_Activate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "activate"}, ""))
 	pattern_AdministratorsService_Get_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "administrators", "id"}, ""))
 	pattern_AdministratorsService_List_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "administrators"}, ""))
 	pattern_AdministratorsService_Update_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "administrators", "id"}, ""))

@@ -10,11 +10,13 @@ service AdministratorsService {
     rpc Create(CreateAdministratorRequest) returns (Empty) {
         option (google.api.http) = {
             post: "/v1/administrators"
+            body: "*"
         };
     }
     rpc Activate(ActivateAdministratorsRequest) returns (Empty) {
         option (google.api.http) = {
-            post: "/v1/administrators/activate"
+            post: "/v1/activate"
+            body: "*"
         };
     }
     rpc Get(GetAdministratorRequest) returns (GetAdministratorResponse) {

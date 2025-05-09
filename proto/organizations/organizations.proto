@@ -12,7 +12,14 @@ service OrganizationsService {
       get: "/v1/organizations/{id}"
     };
   }
+  rpc Update (UpdateOrganizationRequest) returns (Empty) {
+    option (google.api.http) = {
+      put: "/v1/organizations/{id}"
+      body: "*"
+    };
+  }
 }
+message Empty {}
 
 message GetOrganizationRequest {
   string id = 1;
@@ -21,5 +28,12 @@ message GetOrganizationRequest {
 message GetOrganizationResponse {
   string id = 1;
   string organization_name = 2;
+  string billing_plan = 3;
+  string primary_administrator_email = 4;
+}
+
+message UpdateOrganizationRequest {
+  string id = 1;
+  string name = 2;
   string billing_plan = 3;
 }

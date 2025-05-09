@@ -1,7 +1,7 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from "axios";
 
 const baseClient: AxiosInstance = axios.create({
-  baseURL: '',
+  baseURL: "",
   headers: {
     "Content-Type": "application/json",
   },

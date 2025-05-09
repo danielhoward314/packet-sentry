@@ -22,6 +22,42 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type Empty struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Empty) Reset() {
+	*x = Empty{}
+	mi := &file_organizations_organizations_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Empty) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Empty) ProtoMessage() {}
+
+func (x *Empty) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_organizations_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Empty.ProtoReflect.Descriptor instead.
+func (*Empty) Descriptor() ([]byte, []int) {
+	return file_organizations_organizations_proto_rawDescGZIP(), []int{0}
+}
+
 type GetOrganizationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -31,7 +67,7 @@ type GetOrganizationRequest struct {
 
 func (x *GetOrganizationRequest) Reset() {
 	*x = GetOrganizationRequest{}
-	mi := &file_organizations_organizations_proto_msgTypes[0]
+	mi := &file_organizations_organizations_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +79,7 @@ func (x *GetOrganizationRequest) String() string {
 func (*GetOrganizationRequest) ProtoMessage() {}
 
 func (x *GetOrganizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_organizations_organizations_proto_msgTypes[0]
+	mi := &file_organizations_organizations_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +92,7 @@ func (x *GetOrganizationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrganizationRequest.ProtoReflect.Descriptor instead.
 func (*GetOrganizationRequest) Descriptor() ([]byte, []int) {
-	return file_organizations_organizations_proto_rawDescGZIP(), []int{0}
+	return file_organizations_organizations_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetOrganizationRequest) GetId() string {
@@ -67,17 +103,18 @@ func (x *GetOrganizationRequest) GetId() string {
 }
 
 type GetOrganizationResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrganizationName string                 `protobuf:"bytes,2,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
-	BillingPlan      string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationName          string                 `protobuf:"bytes,2,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
+	BillingPlan               string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
+	PrimaryAdministratorEmail string                 `protobuf:"bytes,4,opt,name=primary_administrator_email,json=primaryAdministratorEmail,proto3" json:"primary_administrator_email,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *GetOrganizationResponse) Reset() {
 	*x = GetOrganizationResponse{}
-	mi := &file_organizations_organizations_proto_msgTypes[1]
+	mi := &file_organizations_organizations_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -89,7 +126,7 @@ func (x *GetOrganizationResponse) String() string {
 func (*GetOrganizationResponse) ProtoMessage() {}
 
 func (x *GetOrganizationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_organizations_organizations_proto_msgTypes[1]
+	mi := &file_organizations_organizations_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -102,7 +139,7 @@ func (x *GetOrganizationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrganizationResponse.ProtoReflect.Descriptor instead.
 func (*GetOrganizationResponse) Descriptor() ([]byte, []int) {
-	return file_organizations_organizations_proto_rawDescGZIP(), []int{1}
+	return file_organizations_organizations_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetOrganizationResponse) GetId() string {
@@ -126,19 +163,93 @@ func (x *GetOrganizationResponse) GetBillingPlan() string {
 	return ""
 }
 
+func (x *GetOrganizationResponse) GetPrimaryAdministratorEmail() string {
+	if x != nil {
+		return x.PrimaryAdministratorEmail
+	}
+	return ""
+}
+
+type UpdateOrganizationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	BillingPlan   string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrganizationRequest) Reset() {
+	*x = UpdateOrganizationRequest{}
+	mi := &file_organizations_organizations_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrganizationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrganizationRequest) ProtoMessage() {}
+
+func (x *UpdateOrganizationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_organizations_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOrganizationRequest.ProtoReflect.Descriptor instead.
+func (*UpdateOrganizationRequest) Descriptor() ([]byte, []int) {
+	return file_organizations_organizations_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UpdateOrganizationRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateOrganizationRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateOrganizationRequest) GetBillingPlan() string {
+	if x != nil {
+		return x.BillingPlan
+	}
+	return ""
+}
+
 var File_organizations_organizations_proto protoreflect.FileDescriptor
 
 const file_organizations_organizations_proto_rawDesc = "" +
 	"\n" +
-	"!organizations/organizations.proto\x12\rorganizations\x1a\x1cgoogle/api/annotations.proto\"(\n" +
+	"!organizations/organizations.proto\x12\rorganizations\x1a\x1cgoogle/api/annotations.proto\"\a\n" +
+	"\x05Empty\"(\n" +
 	"\x16GetOrganizationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"y\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xb9\x01\n" +
 	"\x17GetOrganizationResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
 	"\x11organization_name\x18\x02 \x01(\tR\x10organizationName\x12!\n" +
-	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan2\x8c\x01\n" +
+	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan\x12>\n" +
+	"\x1bprimary_administrator_email\x18\x04 \x01(\tR\x19primaryAdministratorEmail\"b\n" +
+	"\x19UpdateOrganizationRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan2\xf9\x01\n" +
 	"\x14OrganizationsService\x12t\n" +
-	"\x03Get\x12%.organizations.GetOrganizationRequest\x1a&.organizations.GetOrganizationResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/organizations/{id}BHZFgithub.com/danielhoward314/packet-sentry/protogen/golang/organizationsb\x06proto3"
+	"\x03Get\x12%.organizations.GetOrganizationRequest\x1a&.organizations.GetOrganizationResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/organizations/{id}\x12k\n" +
+	"\x06Update\x12(.organizations.UpdateOrganizationRequest\x1a\x14.organizations.Empty\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\x1a\x16/v1/organizations/{id}BHZFgithub.com/danielhoward314/packet-sentry/protogen/golang/organizationsb\x06proto3"
 
 var (
 	file_organizations_organizations_proto_rawDescOnce sync.Once
@@ -152,16 +263,20 @@ func file_organizations_organizations_proto_rawDescGZIP() []byte {
 	return file_organizations_organizations_proto_rawDescData
 }
 
-var file_organizations_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_organizations_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_organizations_organizations_proto_goTypes = []any{
-	(*GetOrganizationRequest)(nil),  // 0: organizations.GetOrganizationRequest
-	(*GetOrganizationResponse)(nil), // 1: organizations.GetOrganizationResponse
+	(*Empty)(nil),                     // 0: organizations.Empty
+	(*GetOrganizationRequest)(nil),    // 1: organizations.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),   // 2: organizations.GetOrganizationResponse
+	(*UpdateOrganizationRequest)(nil), // 3: organizations.UpdateOrganizationRequest
 }
 var file_organizations_organizations_proto_depIdxs = []int32{
-	0, // 0: organizations.OrganizationsService.Get:input_type -> organizations.GetOrganizationRequest
-	1, // 1: organizations.OrganizationsService.Get:output_type -> organizations.GetOrganizationResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	1, // 0: organizations.OrganizationsService.Get:input_type -> organizations.GetOrganizationRequest
+	3, // 1: organizations.OrganizationsService.Update:input_type -> organizations.UpdateOrganizationRequest
+	2, // 2: organizations.OrganizationsService.Get:output_type -> organizations.GetOrganizationResponse
+	0, // 3: organizations.OrganizationsService.Update:output_type -> organizations.Empty
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -178,7 +293,7 @@ func file_organizations_organizations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_organizations_organizations_proto_rawDesc), len(file_organizations_organizations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

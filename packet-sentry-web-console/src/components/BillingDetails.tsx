@@ -36,6 +36,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z, ZodTypeAny } from "zod";
 import { CircleHelp } from "lucide-react";
+import { GetOrganizationResponse } from "@/types/api";
 
 type BillingPlanField = {
   type: "select";
@@ -43,12 +44,6 @@ type BillingPlanField = {
   id: string;
   options: { value: string; label: string }[];
   default: string;
-};
-
-type PrimaryAdminField = {
-  type: "email";
-  label: string;
-  id: string;
 };
 
 type CreditCardField =
@@ -63,24 +58,19 @@ type CreditCardField =
     };
 interface BillingDetailsProps
   extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+  existingOrganization: GetOrganizationResponse;
   onSubmit?: (formName: string, formData: FormData) => void | Promise<void>;
 }
 
 function buildBillingPlanSchema() {
   const shape: Record<string, ZodTypeAny> = {};
   shape["billingPlan"] = z.enum(
-    ["10-99-month", "50-399-month", "100-799-month"],
+    ["10_DEVICES_99_MONTH", "50_DEVICES_399_MONTH", "100_DEVICES_799_MONTH"],
     {
       required_error: "Please select a billing plan.",
     },
   );
 
-  return z.object(shape);
-}
-
-function buildPrimaryAdminSchema() {
-  const shape: Record<string, ZodTypeAny> = {};
-  shape["primaryAdminEmail"] = z.string().email();
   return z.object(shape);
 }
 
@@ -131,22 +121,20 @@ function buildCreditCardSchema(fields: CreditCardField[]) {
   });
 }
 
-export function BillingDetails({ onSubmit }: BillingDetailsProps) {
+export function BillingDetails({
+  existingOrganization,
+  onSubmit,
+}: BillingDetailsProps) {
   const billingPlanField: BillingPlanField = {
     type: "select",
     label: "Billing Plan",
     id: "billingPlan",
     options: [
-      { value: "10-99-month", label: "10 Devices at $99/month" },
-      { value: "50-399-month", label: "50 Devices at $399/month" },
-      { value: "100-799-month", label: "100 Devices at $799/month" },
+      { value: "10_DEVICES_99_MONTH", label: "10 Devices at $99/month" },
+      { value: "50_DEVICES_399_MONTH", label: "50 Devices at $399/month" },
+      { value: "100_DEVICES_799_MONTH", label: "100 Devices at $799/month" },
     ],
-    default: "10-99-month",
-  };
-  const primaryAdminField: PrimaryAdminField = {
-    type: "email",
-    label: "Primary Admin Email",
-    id: "primaryAdminEmail",
+    default: "10_DEVICES_99_MONTH",
   };
   const creditCardFields: CreditCardField[] = [
     { type: "text", label: "Name on Card", id: "cardHolderName", options: [] },
@@ -178,24 +166,15 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
   ];
 
   const [error, setError] = useState<string | null>(null);
-  const [openPrimaryAdminDialog, setOpenPrimaryAdminDialog] = useState(false);
   const [openBillingPlanDialog, setOpenBillingPlanDialog] = useState(false);
   const [openPaymentMethodDialog, setOpenPaymentMethodDialog] = useState(false);
   const billingFormSchema = buildBillingPlanSchema();
-  const primaryAdminFormSchema = buildPrimaryAdminSchema();
   const creditCardFormSchema = buildCreditCardSchema(creditCardFields);
 
   const billingForm = useForm<z.infer<typeof billingFormSchema>>({
     resolver: zodResolver(billingFormSchema),
     defaultValues: {
-      billingPlan: "10-99-month",
-    },
-  });
-
-  const primaryAdminForm = useForm<z.infer<typeof primaryAdminFormSchema>>({
-    resolver: zodResolver(primaryAdminFormSchema),
-    defaultValues: {
-      primaryAdminEmail: "",
+      billingPlan: "10_DEVICES_99_MONTH",
     },
   });
 
@@ -218,20 +197,6 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
     billingForm.reset();
   };
 
-  const handlePrimaryAdminFormSave = (
-    values: z.infer<typeof primaryAdminFormSchema>,
-  ) => {
-    const formData = new FormData();
-    for (const key in values) {
-      console.log(key, values[key]);
-      formData.append(key, values[key]);
-    }
-
-    onSubmit?.("primaryAdministratorForm", formData);
-    setOpenPrimaryAdminDialog(false);
-    primaryAdminForm.reset();
-  };
-
   const handleCreditCardFormSave = (
     values: z.infer<typeof creditCardFormSchema>,
   ) => {
@@ -250,78 +215,23 @@ export function BillingDetails({ onSubmit }: BillingDetailsProps) {
     setError(null);
   };
 
+  const mapBillingPlan = (dbPlan: string) => {
+    if (dbPlan === "10_DEVICES_99_MONTH") return "10 Devices / $99 Monthly";
+    if (dbPlan === "50_DEVICES_399_MONTH") return "50 Devices / $399 Monthly";
+    if (dbPlan === "100_DEVICES_799_MONTH") return "100 Devices / $799 Monthly";
+    return "Unknown Plan";
+  };
+
   return (
     <>
       <Label className="text-lg font-bold">Account Number</Label>
-      <p className="text-muted-foreground text-balance">TODO number here</p>
-      <Label className="text-lg font-bold">Primary Administrator</Label>
-      <div className="flex justify-between">
-        <p className="text-muted-foreground text-balance">TODO email here</p>
-        <Dialog
-          open={openPrimaryAdminDialog}
-          onOpenChange={setOpenPrimaryAdminDialog}
-        >
-          <DialogTrigger asChild>
-            <Button variant="outline">Edit</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Edit Primary Administrator</DialogTitle>
-              <DialogDescription>
-                Make changes to the primary administrator email for this
-                account.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...primaryAdminForm}>
-              <form
-                className="w-full my-4"
-                onSubmit={primaryAdminForm.handleSubmit(
-                  handlePrimaryAdminFormSave,
-                )}
-              >
-                <FormField
-                  key={primaryAdminField.id}
-                  control={primaryAdminForm.control}
-                  name={primaryAdminField.id}
-                  render={({ field: rhfField }) => (
-                    <FormItem>
-                      <div className="flex items-center">
-                        <FormLabel className="text-medium m-2">
-                          {primaryAdminField.label}
-                        </FormLabel>
-                      </div>
-                      <FormControl>
-                        <Input
-                          className="max-w-[300px] m-0"
-                          type={primaryAdminField.type}
-                          {...rhfField}
-                          onChange={(e) => {
-                            rhfField.onChange(e);
-                            clearError();
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {error && (
-                  <FormMessage className="text-destructive text-sm text-center">
-                    {error}
-                  </FormMessage>
-                )}
-                <DialogFooter className="my-2">
-                  <Button type="submit">Save Changes</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      <p className="text-muted-foreground text-balance">
+        {existingOrganization.id}
+      </p>
       <Label className="text-lg font-bold">Billing Plan</Label>
       <div className="flex justify-between">
         <p className="text-muted-foreground text-balance">
-          TODO Billing Plan from API
+          {mapBillingPlan(existingOrganization.billingPlan)}
         </p>
         <Dialog
           open={openBillingPlanDialog}

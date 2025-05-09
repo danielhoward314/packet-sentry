@@ -38,6 +38,8 @@ type Field =
 
 interface SettingsDetailsProps
   extends Omit<React.ComponentProps<"div">, "onSubmit"> {
+  existingDisplayName: string;
+  existingEmail: string;
   fields: Field[];
   onSubmit?: (formData: FormData) => void | Promise<void>;
 }
@@ -62,7 +64,12 @@ function buildZodSchema(fields: Field[]) {
   return z.object(shape);
 }
 
-export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
+export function SettingsDetails({
+  existingDisplayName,
+  existingEmail,
+  fields,
+  onSubmit,
+}: SettingsDetailsProps) {
   const [error, setError] = useState<string | null>(null);
   const [openSettingsFormDialog, setOpenSettingsFormDialog] = useState(false);
   const { theme } = useTheme();
@@ -95,9 +102,11 @@ export function SettingsDetails({ fields, onSubmit }: SettingsDetailsProps) {
   return (
     <>
       <Label className="text-lg font-bold">Full Name</Label>
-      <p className="text-muted-foreground text-balance">TODO full name here</p>
+      <p className="text-muted-foreground text-balance">
+        {existingDisplayName}
+      </p>
       <Label className="text-lg font-bold">Email</Label>
-      <p className="text-muted-foreground text-balance">TODO email here</p>
+      <p className="text-muted-foreground text-balance">{existingEmail}</p>
       <Label className="text-lg font-bold">Appearance</Label>
       <div className="flex justify-between">
         <div

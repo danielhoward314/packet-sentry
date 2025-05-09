@@ -96,7 +96,7 @@ func (as *administratorsService) Create(ctx context.Context, request *pbAdminist
 		as.logger.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to create registration")
 	}
-	activationLink := as.webConsoleURL + "/administrators/activate?token=" + token
+	activationLink := as.webConsoleURL + "/activate?token=" + token
 	emailTemplateData := struct {
 		ActivationLink   string
 		Code             string

@@ -548,10 +548,10 @@ const file_administrators_administrators_proto_rawDesc = "" +
 	"\bverified\x18\x05 \x01(\bR\bverified\x12-\n" +
 	"\x12authorization_role\x18\x06 \x01(\tR\x11authorizationRole\"n\n" +
 	"\x1aListAdministratorsResponse\x12P\n" +
-	"\x0eadministrators\x18\x01 \x03(\v2(.administrators.GetAdministratorResponseR\x0eadministrators2\xcc\x05\n" +
-	"\x15AdministratorsService\x12g\n" +
-	"\x06Create\x12*.administrators.CreateAdministratorRequest\x1a\x15.administrators.Empty\"\x1a\x82\xd3\xe4\x93\x02\x14\"\x12/v1/administrators\x12u\n" +
-	"\bActivate\x12-.administrators.ActivateAdministratorsRequest\x1a\x15.administrators.Empty\"#\x82\xd3\xe4\x93\x02\x1d\"\x1b/v1/administrators/activate\x12y\n" +
+	"\x0eadministrators\x18\x01 \x03(\v2(.administrators.GetAdministratorResponseR\x0eadministrators2\xc3\x05\n" +
+	"\x15AdministratorsService\x12j\n" +
+	"\x06Create\x12*.administrators.CreateAdministratorRequest\x1a\x15.administrators.Empty\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/administrators\x12i\n" +
+	"\bActivate\x12-.administrators.ActivateAdministratorsRequest\x1a\x15.administrators.Empty\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*\"\f/v1/activate\x12y\n" +
 	"\x03Get\x12'.administrators.GetAdministratorRequest\x1a(.administrators.GetAdministratorResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/administrators/{id}\x12y\n" +
 	"\x04List\x12).administrators.ListAdministratorsRequest\x1a*.administrators.ListAdministratorsResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/administrators\x12o\n" +
 	"\x06Update\x12*.administrators.UpdateAdministratorRequest\x1a\x15.administrators.Empty\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\x1a\x17/v1/administrators/{id}\x12l\n" +

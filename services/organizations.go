@@ -48,8 +48,36 @@ func (os *organizationsService) Get(ctx context.Context, request *pbOrgs.GetOrga
 		return nil, status.Errorf(codes.Internal, "failed to read organization data: %s", err.Error())
 	}
 	return &pbOrgs.GetOrganizationResponse{
-		Id:               org.ID,
-		OrganizationName: org.Name,
-		BillingPlan:      org.BillingPlanType,
+		Id:                        org.ID,
+		OrganizationName:          org.Name,
+		BillingPlan:               org.BillingPlanType,
+		PrimaryAdministratorEmail: org.PrimaryAdministratorEmail,
 	}, nil
+}
+
+func (os *organizationsService) Update(ctx context.Context, request *pbOrgs.UpdateOrganizationRequest) (*pbOrgs.Empty, error) {
+	if request.Id == "" {
+		os.logger.Error("invalid organization id")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid organization id")
+	}
+	org, err := os.datastore.Organizations.Read(request.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "organization not found: %s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to read organization data: %s", err.Error())
+	}
+
+	if request.Name != "" {
+		org.Name = request.Name
+	}
+	if request.BillingPlan != "" {
+		org.BillingPlanType = request.BillingPlan
+	}
+
+	err = os.datastore.Organizations.Update(org)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update organization data: %s", err.Error())
+	}
+	return &pbOrgs.Empty{}, nil
 }

@@ -8,8 +8,9 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'billing_plan_type') THEN
         CREATE TYPE billing_plan_type AS ENUM (
-            'FREE',
-            'PREMIUM'
+            '10_DEVICES_99_MONTH',
+            '50_DEVICES_399_MONTH',
+            '100_DEVICES_799_MONTH'
         );
     END IF;
 END$$;

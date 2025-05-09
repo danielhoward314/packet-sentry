@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrganizationsService_Get_FullMethodName = "/organizations.OrganizationsService/Get"
+	OrganizationsService_Get_FullMethodName    = "/organizations.OrganizationsService/Get"
+	OrganizationsService_Update_FullMethodName = "/organizations.OrganizationsService/Update"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrganizationsServiceClient interface {
 	Get(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
+	Update(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type organizationsServiceClient struct {
@@ -47,11 +49,22 @@ func (c *organizationsServiceClient) Get(ctx context.Context, in *GetOrganizatio
 	return out, nil
 }
 
+func (c *organizationsServiceClient) Update(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, OrganizationsService_Update_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrganizationsServiceServer is the server API for OrganizationsService service.
 // All implementations must embed UnimplementedOrganizationsServiceServer
 // for forward compatibility.
 type OrganizationsServiceServer interface {
 	Get(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
+	Update(context.Context, *UpdateOrganizationRequest) (*Empty, error)
 	mustEmbedUnimplementedOrganizationsServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedOrganizationsServiceServer struct{}
 
 func (UnimplementedOrganizationsServiceServer) Get(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) Update(context.Context, *UpdateOrganizationRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) mustEmbedUnimplementedOrganizationsServiceServer() {}
 func (UnimplementedOrganizationsServiceServer) testEmbeddedByValue()                              {}
@@ -104,6 +120,24 @@ func _OrganizationsService_Get_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_Update_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).Update(ctx, req.(*UpdateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrganizationsService_ServiceDesc is the grpc.ServiceDesc for OrganizationsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Get",
 			Handler:    _OrganizationsService_Get_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _OrganizationsService_Update_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
