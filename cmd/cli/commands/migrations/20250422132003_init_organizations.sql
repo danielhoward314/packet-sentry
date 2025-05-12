@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     primary_administrator_email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     billing_plan_type billing_plan_type NOT NULL,
+    payment_details JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

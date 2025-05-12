@@ -30,10 +30,22 @@ message GetOrganizationResponse {
   string organization_name = 2;
   string billing_plan = 3;
   string primary_administrator_email = 4;
+  string masked_credit_card = 5;
 }
 
 message UpdateOrganizationRequest {
   string id = 1;
   string name = 2;
   string billing_plan = 3;
+  PaymentDetails payment_details = 4;
+}
+
+message PaymentDetails {
+  string card_name = 1;
+  string address_line_one = 2;
+  string address_line_two = 3;
+  string card_number = 4;
+  string expiration_month = 5;
+  string expiration_year = 6;
+  string cvc = 7;
 }

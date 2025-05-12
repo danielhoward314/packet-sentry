@@ -116,9 +116,21 @@ export type GetOrganizationResponse = {
   id: string;
   organizationName: string;
   billingPlan: string;
+  maskedCreditCard: string;
 };
 
+export type PaymentDetails = {
+  cardName: string;
+  addressLineOne: string;
+  addressLineTwo: string;
+  cardNumber: string;
+  expirationMonth: string;
+  expirationYear: string;
+  cvc: string;
+}
+
 export type UpdateOrganizationRequest = {
-  name: string;
-  billingPlan: string;
+  name?: string;
+  billingPlan?: string;
+  paymentDetails?: PaymentDetails;
 };

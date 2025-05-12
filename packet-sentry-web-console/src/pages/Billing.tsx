@@ -54,7 +54,6 @@ export default function BillingPage() {
     if (formName === "billingPlanForm") {
       try {
         const response = await updateOrganization(existingOrg.id, {
-          name: existingOrg.organizationName,
           billingPlan: data.billingPlan as string,
         });
 
@@ -67,8 +66,28 @@ export default function BillingPage() {
       }
       toastSuccessMsg = "Your billing plan has been updated.";
     } else if (formName === "creditCardForm") {
-      // TODO: persist payment details
-      toastSuccessMsg = "Your payment method has been updated.";
+      console.log(data)
+      try {
+        const response = await updateOrganization(existingOrg.id, {
+          paymentDetails: {
+            cardName: data.cardHolderName as string,
+            cardNumber: data.cardNumber as string,
+            addressLineOne: data.billingAddressLineOne as string,
+            addressLineTwo: data.billingAddressLineTwo as string,
+            expirationMonth: data.expirationMonth as string,
+            expirationYear: data.expirationYear as string,
+            cvc: data.cvc as string,
+          }
+        });
+
+        if (response.status < 200 || response.status >= 400) {
+          throw new Error("non-200 status for update");
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Failed to save update your payment details.");
+      }
+      toastSuccessMsg = "Your payment details has been updated.";
     }
 
     try {

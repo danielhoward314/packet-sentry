@@ -138,6 +138,8 @@ export function BillingDetails({
   };
   const creditCardFields: CreditCardField[] = [
     { type: "text", label: "Name on Card", id: "cardHolderName", options: [] },
+    { type: "text", label: "Billing Address", id: "billingAddressLineOne", options: [] },
+    { type: "text", label: "Billing Address (Line 2)", id: "billingAddressLineTwo", options: [] },
     {
       type: "creditCardNumber",
       label: "Card Number",
@@ -304,7 +306,7 @@ export function BillingDetails({
       <Label className="text-lg font-bold">Payment Method</Label>
       <div className="flex justify-between">
         <p className="text-muted-foreground text-balance">
-          TODO last 4 digits of card
+          {existingOrganization.maskedCreditCard ?? "No existing payment method."}
         </p>
         <Dialog
           open={openPaymentMethodDialog}
@@ -350,17 +352,15 @@ export function BillingDetails({
                   )}
                 />
 
-                <FormField
+                                <FormField
                   key={creditCardFields[1].id}
                   control={creditCardForm.control}
                   name={creditCardFields[1].id}
                   render={({ field: rhfField }) => (
                     <FormItem>
-                      <div className="flex items-center">
-                        <FormLabel className="text-medium m-2">
-                          {creditCardFields[1].label}
-                        </FormLabel>
-                      </div>
+                      <FormLabel className="text-medium m-2">
+                        {creditCardFields[1].label}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           className="max-w-[300px] m-0"
@@ -377,16 +377,68 @@ export function BillingDetails({
                   )}
                 />
 
+                                <FormField
+                  key={creditCardFields[2].id}
+                  control={creditCardForm.control}
+                  name={creditCardFields[2].id}
+                  render={({ field: rhfField }) => (
+                    <FormItem>
+                      <FormLabel className="text-medium m-2">
+                        {creditCardFields[2].label}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          className="max-w-[300px] m-0"
+                          type={creditCardFields[2].type}
+                          {...rhfField}
+                          onChange={(e) => {
+                            rhfField.onChange(e);
+                            clearError();
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  key={creditCardFields[3].id}
+                  control={creditCardForm.control}
+                  name={creditCardFields[3].id}
+                  render={({ field: rhfField }) => (
+                    <FormItem>
+                      <div className="flex items-center">
+                        <FormLabel className="text-medium m-2">
+                          {creditCardFields[3].label}
+                        </FormLabel>
+                      </div>
+                      <FormControl>
+                        <Input
+                          className="max-w-[300px] m-0"
+                          type={creditCardFields[3].type}
+                          {...rhfField}
+                          onChange={(e) => {
+                            rhfField.onChange(e);
+                            clearError();
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex gap-4 my-4">
                   <FormField
-                    key={creditCardFields[2].id}
+                    key={creditCardFields[4].id}
                     control={creditCardForm.control}
-                    name={creditCardFields[2].id}
+                    name={creditCardFields[4].id}
                     render={({ field: rhfField }) => (
                       <FormItem>
                         <div className="flex items-center gap-2">
                           <FormLabel className="text-medium m-2">
-                            {creditCardFields[2].label}
+                            {creditCardFields[4].label}
                           </FormLabel>
                           <TooltipProvider>
                             <Tooltip>
@@ -409,7 +461,7 @@ export function BillingDetails({
                         <FormControl>
                           <Input
                             className="w-24 m-0"
-                            type={creditCardFields[2].type}
+                            type={creditCardFields[4].type}
                             {...rhfField}
                             onChange={(e) => {
                               rhfField.onChange(e);
@@ -422,13 +474,13 @@ export function BillingDetails({
                     )}
                   />
                   <FormField
-                    key={creditCardFields[3].id}
+                    key={creditCardFields[5].id}
                     control={creditCardForm.control}
-                    name={creditCardFields[3].id}
+                    name={creditCardFields[5].id}
                     render={({ field: rhfField }) => (
                       <FormItem>
                         <FormLabel className="text-medium m-2">
-                          {creditCardFields[3].label}
+                          {creditCardFields[5].label}
                         </FormLabel>
                         <FormControl>
                           <Select
@@ -437,13 +489,13 @@ export function BillingDetails({
                           >
                             <SelectTrigger
                               className="min-w-24"
-                              id={creditCardFields[3].id}
-                              aria-label={creditCardFields[3].label}
+                              id={creditCardFields[5].id}
+                              aria-label={creditCardFields[5].label}
                             >
                               <SelectValue placeholder="01" />
                             </SelectTrigger>
                             <SelectContent>
-                              {creditCardFields[3].options.map((option) => (
+                              {creditCardFields[5].options.map((option) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}
@@ -459,13 +511,13 @@ export function BillingDetails({
                     )}
                   />
                   <FormField
-                    key={creditCardFields[4].id}
+                    key={creditCardFields[6].id}
                     control={creditCardForm.control}
-                    name={creditCardFields[4].id}
+                    name={creditCardFields[6].id}
                     render={({ field: rhfField }) => (
                       <FormItem>
                         <FormLabel className="text-medium m-2">
-                          {creditCardFields[4].label}
+                          {creditCardFields[6].label}
                         </FormLabel>
                         <FormControl>
                           <Select
@@ -474,17 +526,17 @@ export function BillingDetails({
                           >
                             <SelectTrigger
                               className="min-w-24"
-                              id={creditCardFields[4].id}
-                              aria-label={creditCardFields[4].label}
+                              id={creditCardFields[6].id}
+                              aria-label={creditCardFields[6].label}
                             >
                               <SelectValue
                                 placeholder={
-                                  creditCardFields[4].options[1].value
+                                  creditCardFields[6].options[1].value
                                 }
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {creditCardFields[4].options.map((option) => (
+                              {creditCardFields[6].options.map((option) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}

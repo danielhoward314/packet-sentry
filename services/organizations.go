@@ -47,11 +47,19 @@ func (os *organizationsService) Get(ctx context.Context, request *pbOrgs.GetOrga
 		}
 		return nil, status.Errorf(codes.Internal, "failed to read organization data: %s", err.Error())
 	}
+
+	maskedCreditCard := ""
+	if org.PaymentDetails != nil && len(org.PaymentDetails.CardNumber) >= 4 {
+		maskedCreditCard = org.PaymentDetails.CardNumber[len(org.PaymentDetails.CardNumber)-4:]
+
+	}
+
 	return &pbOrgs.GetOrganizationResponse{
 		Id:                        org.ID,
 		OrganizationName:          org.Name,
 		BillingPlan:               org.BillingPlanType,
 		PrimaryAdministratorEmail: org.PrimaryAdministratorEmail,
+		MaskedCreditCard:          maskedCreditCard,
 	}, nil
 }
 
@@ -73,6 +81,52 @@ func (os *organizationsService) Update(ctx context.Context, request *pbOrgs.Upda
 	}
 	if request.BillingPlan != "" {
 		org.BillingPlanType = request.BillingPlan
+	}
+	os.logger.Info("request.PaymentDetails.CardName", "request.PaymentDetails.CardName", request.PaymentDetails.CardName)
+	os.logger.Info("request.PaymentDetails.AddressLineOne", "request.PaymentDetails.AddressLineOne", request.PaymentDetails.AddressLineOne)
+	os.logger.Info("request.PaymentDetails.AddressLineTwo", "request.PaymentDetails.AddressLineTwo", request.PaymentDetails.AddressLineTwo)
+	os.logger.Info("request.PaymentDetails.CardNumber", "request.PaymentDetails.CardNumber", request.PaymentDetails.CardNumber)
+	os.logger.Info("request.PaymentDetails.ExpirationMonth", "request.PaymentDetails.ExpirationMonth", request.PaymentDetails.ExpirationMonth)
+	os.logger.Info("request.PaymentDetails.ExpirationYear", "request.PaymentDetails.ExpirationYear", request.PaymentDetails.ExpirationYear)
+	os.logger.Info("request.PaymentDetails.Cvc", "request.PaymentDetails.Cvc", request.PaymentDetails.Cvc)
+	if request.PaymentDetails != nil {
+		if request.PaymentDetails.CardName == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.AddressLineOne == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.AddressLineTwo == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.CardNumber == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.ExpirationMonth == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.ExpirationYear == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		if request.PaymentDetails.Cvc == "" {
+			os.logger.Error("invalid payment details")
+			return nil, status.Errorf(codes.InvalidArgument, "invalid payment details")
+		}
+		org.PaymentDetails = &dao.PaymentDetails{
+			CardName:        request.PaymentDetails.CardName,
+			AddressLineOne:  request.PaymentDetails.AddressLineOne,
+			AddressLineTwo:  request.PaymentDetails.AddressLineTwo,
+			CardNumber:      request.PaymentDetails.CardNumber,
+			ExpirationMonth: request.PaymentDetails.ExpirationMonth,
+			ExpirationYear:  request.PaymentDetails.ExpirationYear,
+			Cvc:             request.PaymentDetails.Cvc,
+		}
 	}
 
 	err = os.datastore.Organizations.Update(org)

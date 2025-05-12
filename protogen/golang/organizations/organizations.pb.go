@@ -108,6 +108,7 @@ type GetOrganizationResponse struct {
 	OrganizationName          string                 `protobuf:"bytes,2,opt,name=organization_name,json=organizationName,proto3" json:"organization_name,omitempty"`
 	BillingPlan               string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
 	PrimaryAdministratorEmail string                 `protobuf:"bytes,4,opt,name=primary_administrator_email,json=primaryAdministratorEmail,proto3" json:"primary_administrator_email,omitempty"`
+	MaskedCreditCard          string                 `protobuf:"bytes,5,opt,name=masked_credit_card,json=maskedCreditCard,proto3" json:"masked_credit_card,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -170,13 +171,21 @@ func (x *GetOrganizationResponse) GetPrimaryAdministratorEmail() string {
 	return ""
 }
 
+func (x *GetOrganizationResponse) GetMaskedCreditCard() string {
+	if x != nil {
+		return x.MaskedCreditCard
+	}
+	return ""
+}
+
 type UpdateOrganizationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	BillingPlan   string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	BillingPlan    string                 `protobuf:"bytes,3,opt,name=billing_plan,json=billingPlan,proto3" json:"billing_plan,omitempty"`
+	PaymentDetails *PaymentDetails        `protobuf:"bytes,4,opt,name=payment_details,json=paymentDetails,proto3" json:"payment_details,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateOrganizationRequest) Reset() {
@@ -230,6 +239,105 @@ func (x *UpdateOrganizationRequest) GetBillingPlan() string {
 	return ""
 }
 
+func (x *UpdateOrganizationRequest) GetPaymentDetails() *PaymentDetails {
+	if x != nil {
+		return x.PaymentDetails
+	}
+	return nil
+}
+
+type PaymentDetails struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CardName        string                 `protobuf:"bytes,1,opt,name=card_name,json=cardName,proto3" json:"card_name,omitempty"`
+	AddressLineOne  string                 `protobuf:"bytes,2,opt,name=address_line_one,json=addressLineOne,proto3" json:"address_line_one,omitempty"`
+	AddressLineTwo  string                 `protobuf:"bytes,3,opt,name=address_line_two,json=addressLineTwo,proto3" json:"address_line_two,omitempty"`
+	CardNumber      string                 `protobuf:"bytes,4,opt,name=card_number,json=cardNumber,proto3" json:"card_number,omitempty"`
+	ExpirationMonth string                 `protobuf:"bytes,5,opt,name=expiration_month,json=expirationMonth,proto3" json:"expiration_month,omitempty"`
+	ExpirationYear  string                 `protobuf:"bytes,6,opt,name=expiration_year,json=expirationYear,proto3" json:"expiration_year,omitempty"`
+	Cvc             string                 `protobuf:"bytes,7,opt,name=cvc,proto3" json:"cvc,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PaymentDetails) Reset() {
+	*x = PaymentDetails{}
+	mi := &file_organizations_organizations_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentDetails) ProtoMessage() {}
+
+func (x *PaymentDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_organizations_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentDetails.ProtoReflect.Descriptor instead.
+func (*PaymentDetails) Descriptor() ([]byte, []int) {
+	return file_organizations_organizations_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PaymentDetails) GetCardName() string {
+	if x != nil {
+		return x.CardName
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetAddressLineOne() string {
+	if x != nil {
+		return x.AddressLineOne
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetAddressLineTwo() string {
+	if x != nil {
+		return x.AddressLineTwo
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetCardNumber() string {
+	if x != nil {
+		return x.CardNumber
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetExpirationMonth() string {
+	if x != nil {
+		return x.ExpirationMonth
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetExpirationYear() string {
+	if x != nil {
+		return x.ExpirationYear
+	}
+	return ""
+}
+
+func (x *PaymentDetails) GetCvc() string {
+	if x != nil {
+		return x.Cvc
+	}
+	return ""
+}
+
 var File_organizations_organizations_proto protoreflect.FileDescriptor
 
 const file_organizations_organizations_proto_rawDesc = "" +
@@ -237,16 +345,27 @@ const file_organizations_organizations_proto_rawDesc = "" +
 	"!organizations/organizations.proto\x12\rorganizations\x1a\x1cgoogle/api/annotations.proto\"\a\n" +
 	"\x05Empty\"(\n" +
 	"\x16GetOrganizationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xb9\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xe7\x01\n" +
 	"\x17GetOrganizationResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
 	"\x11organization_name\x18\x02 \x01(\tR\x10organizationName\x12!\n" +
 	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan\x12>\n" +
-	"\x1bprimary_administrator_email\x18\x04 \x01(\tR\x19primaryAdministratorEmail\"b\n" +
+	"\x1bprimary_administrator_email\x18\x04 \x01(\tR\x19primaryAdministratorEmail\x12,\n" +
+	"\x12masked_credit_card\x18\x05 \x01(\tR\x10maskedCreditCard\"\xaa\x01\n" +
 	"\x19UpdateOrganizationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
-	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan2\xf9\x01\n" +
+	"\fbilling_plan\x18\x03 \x01(\tR\vbillingPlan\x12F\n" +
+	"\x0fpayment_details\x18\x04 \x01(\v2\x1d.organizations.PaymentDetailsR\x0epaymentDetails\"\x88\x02\n" +
+	"\x0ePaymentDetails\x12\x1b\n" +
+	"\tcard_name\x18\x01 \x01(\tR\bcardName\x12(\n" +
+	"\x10address_line_one\x18\x02 \x01(\tR\x0eaddressLineOne\x12(\n" +
+	"\x10address_line_two\x18\x03 \x01(\tR\x0eaddressLineTwo\x12\x1f\n" +
+	"\vcard_number\x18\x04 \x01(\tR\n" +
+	"cardNumber\x12)\n" +
+	"\x10expiration_month\x18\x05 \x01(\tR\x0fexpirationMonth\x12'\n" +
+	"\x0fexpiration_year\x18\x06 \x01(\tR\x0eexpirationYear\x12\x10\n" +
+	"\x03cvc\x18\a \x01(\tR\x03cvc2\xf9\x01\n" +
 	"\x14OrganizationsService\x12t\n" +
 	"\x03Get\x12%.organizations.GetOrganizationRequest\x1a&.organizations.GetOrganizationResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/organizations/{id}\x12k\n" +
 	"\x06Update\x12(.organizations.UpdateOrganizationRequest\x1a\x14.organizations.Empty\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\x1a\x16/v1/organizations/{id}BHZFgithub.com/danielhoward314/packet-sentry/protogen/golang/organizationsb\x06proto3"
@@ -263,23 +382,25 @@ func file_organizations_organizations_proto_rawDescGZIP() []byte {
 	return file_organizations_organizations_proto_rawDescData
 }
 
-var file_organizations_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_organizations_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_organizations_organizations_proto_goTypes = []any{
 	(*Empty)(nil),                     // 0: organizations.Empty
 	(*GetOrganizationRequest)(nil),    // 1: organizations.GetOrganizationRequest
 	(*GetOrganizationResponse)(nil),   // 2: organizations.GetOrganizationResponse
 	(*UpdateOrganizationRequest)(nil), // 3: organizations.UpdateOrganizationRequest
+	(*PaymentDetails)(nil),            // 4: organizations.PaymentDetails
 }
 var file_organizations_organizations_proto_depIdxs = []int32{
-	1, // 0: organizations.OrganizationsService.Get:input_type -> organizations.GetOrganizationRequest
-	3, // 1: organizations.OrganizationsService.Update:input_type -> organizations.UpdateOrganizationRequest
-	2, // 2: organizations.OrganizationsService.Get:output_type -> organizations.GetOrganizationResponse
-	0, // 3: organizations.OrganizationsService.Update:output_type -> organizations.Empty
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: organizations.UpdateOrganizationRequest.payment_details:type_name -> organizations.PaymentDetails
+	1, // 1: organizations.OrganizationsService.Get:input_type -> organizations.GetOrganizationRequest
+	3, // 2: organizations.OrganizationsService.Update:input_type -> organizations.UpdateOrganizationRequest
+	2, // 3: organizations.OrganizationsService.Get:output_type -> organizations.GetOrganizationResponse
+	0, // 4: organizations.OrganizationsService.Update:output_type -> organizations.Empty
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_organizations_organizations_proto_init() }
@@ -293,7 +414,7 @@ func file_organizations_organizations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_organizations_organizations_proto_rawDesc), len(file_organizations_organizations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

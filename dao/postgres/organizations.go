@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	_ "github.com/lib/pq"
@@ -42,7 +43,12 @@ func (o *organizations) Create(organization *dao.Organization) (string, error) {
 		return "", errors.New("invalid organization name")
 	}
 	var id string
-	err := o.db.QueryRow(queries.OrganizationsInsert, organization.PrimaryAdministratorEmail, organization.Name, TenDevicesBillingPlan).Scan(&id)
+	err := o.db.QueryRow(
+		queries.OrganizationsInsert,
+		organization.PrimaryAdministratorEmail,
+		organization.Name,
+		TenDevicesBillingPlan,
+	).Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -51,15 +57,27 @@ func (o *organizations) Create(organization *dao.Organization) (string, error) {
 
 func (o *organizations) Read(id string) (*dao.Organization, error) {
 	organization := &dao.Organization{}
+	var paymentDetailsJSON []byte
 	err := o.db.QueryRow(queries.OrganizationsSelect, id).Scan(
 		&organization.ID,
 		&organization.PrimaryAdministratorEmail,
 		&organization.Name,
 		&organization.BillingPlanType,
+		&paymentDetailsJSON,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	paymentDetails := &dao.PaymentDetails{}
+	if len(paymentDetailsJSON) != 0 {
+		err = json.Unmarshal(paymentDetailsJSON, paymentDetails)
+		if err != nil {
+			return nil, err
+		}
+	}
+	organization.PaymentDetails = paymentDetails
+
 	return organization, nil
 }
 
@@ -77,10 +95,16 @@ func (o *organizations) Update(organization *dao.Organization) error {
 		return errors.New("invalid billing plan type for update")
 	}
 
-	_, err := o.db.Exec(
+	paymentDetailsJSON, err := json.Marshal(organization.PaymentDetails)
+	if err != nil {
+		return err
+	}
+
+	_, err = o.db.Exec(
 		queries.OrganizationsUpdate,
 		organization.Name,
 		organization.BillingPlanType,
+		paymentDetailsJSON,
 		organization.ID,
 	)
 
