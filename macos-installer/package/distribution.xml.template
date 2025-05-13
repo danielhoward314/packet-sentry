@@ -14,7 +14,7 @@
     <organization>com.danielhoward314</organization>
     <domains enable_localSystem="true"/>
     <options customize="never" require-scripts="true" hostArchitectures="x86_64,arm64"/>
-    <pkg-ref id="com.danielhoward314.packet-sentry-agent" version="1.0">#agent.pkg</pkg-ref>
+    <pkg-ref id="com.danielhoward314.packet-sentry-agent" version="{{VERSION}}">#agent-{{ARCH}}.pkg</pkg-ref>
     <pkg-ref id="com.danielhoward314.packet-sentry-agent">
         <bundle-version/>
     </pkg-ref>

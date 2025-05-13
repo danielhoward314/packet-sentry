@@ -45,9 +45,8 @@ pushd "$ROOT_DIR/macos-installer/package"
 
 # Copy the template to distribution.xml
 cp distribution.xml.template distribution.xml
-# Use sed to replace hard-coded version in the template with the actual version
-sed -i '' -E "s/(<pkg-ref id=\"com\.danielhoward314\.packet-sentry-agent\" version=\")([^\"]+)(\">)/\1$VERSION\3/" distribution.xml
-sed -i '' -E "s/(<product version=\")([^\"]+)(\"\/>)/\1$VERSION\3/" distribution.xml
+sed -i '' "s/{{VERSION}}/$VERSION/g" distribution.xml
+sed -i '' "s/{{ARCH}}/$ARCH/g" distribution.xml
 echo "Generated distribution.xml with version $VERSION"
 
 PKG_NAME="packet-sentry-agent_${VERSION}_${ARCH}.pkg"
