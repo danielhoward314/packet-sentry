@@ -80,6 +80,8 @@ ARCH="$2"
 echo "validating installer for ${ARCH} and version: ${VERSION}"
 PKG_FILENAME="packet-sentry-agent_${VERSION}_${ARCH}.pkg"
 echo "expecting pkg file name ${PKG_FILENAME}"
+INNER_PKG_FILENAME="agent-${ARCH}.pkg"
+echo "expecting nested pkg file name ${INNER_PKG_FILENAME}"
 
 pushd "$ROOT_DIR/macos-installer/package"
 
@@ -117,7 +119,7 @@ echo "Distribution contains correct version $VERSION in <pkg-ref> and <product>.
 
 # When expanded, the outer pkg (packet-sentry-agent.pkg) has an agent.pkg that is a directory.
 # A strange quirk of Apple's installer format.
-cd ./agent.pkg
+cd "./${INNER_PKG_FILENAME}"
 
 # Ensures the Scripts directory has only the expected scripts and that their checksums match source.
 validate_scripts
