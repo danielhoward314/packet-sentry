@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -71,34 +73,64 @@ jobs:
       - name: Build Go Binary and Installer for ${{ matrix.os }} ${{ matrix.architecture }}
         shell: bash
         run: |
+          VERSION="${GITHUB_REF##*/}"
+          echo "version from github ref is ${VERSION}"
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             echo "installing libpcap dependency"
             sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux amd64"
             ./scripts/build_agent "linux" "amd64"
-            echo "build Linux .deb installer for version 1.0.0 for amd64"
-            go run ./linux-installer/main.go "1.0.0" "amd64" "deb"
+            echo "build Linux .deb installer for version ${VERSION} for amd64"
+            go run ./linux-installer/main.go "${VERSION}" "amd64" "deb"
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "ubuntu-24.04-arm" ]; then
             echo "installing libpcap dependency"
             sudo apt-get install -y libpcap-dev
             echo "building Go binaries for linux arm64"
             ./scripts/build_agent "linux" "arm64"
-            echo "build Linux .deb installer for version 1.0.0 for arm64"
-            go run ./linux-installer/main.go "1.0.0" "arm64" "deb"
+            echo "build Linux .deb installer for version ${VERSION} for arm64"
+            go run ./linux-installer/main.go "${VERSION}" "arm64" "deb"
             # TODO: linux installer validation
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "building Go binaries for darwin ${{ matrix.architecture }}"
             ./scripts/build_agent darwin "${{ matrix.architecture }}"
             # TODO: use git to get version
-            echo "building macOS pkg installer for version 1.0.0 for ${{ matrix.architecture }}"
-            ./macos-installer/build-installer.sh "1.0.0" "${{ matrix.architecture }}"
-            echo "validating macOS pkg installer for version 1.0.0 for ${{ matrix.architecture }}"
-            ./macos-installer/validate-installer.sh "1.0.0" "${{ matrix.architecture }}"
+            echo "building macOS pkg installer for version ${VERSION} for ${{ matrix.architecture }}"
+            ./macos-installer/build-installer.sh "${VERSION}" "${{ matrix.architecture }}"
+            echo "validating macOS pkg installer for version ${VERSION} for ${{ matrix.architecture }}"
+            ./macos-installer/validate-installer.sh "${VERSION}" "${{ matrix.architecture }}"
           else
             echo "building Go binaries for windows ${{ matrix.architecture }}"
             pwsh ./scripts/build_agent.ps1 "${{ matrix.architecture }}"
             # TODO: use git to get version
-            pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version 1.0.0 -ci $true
+            pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version "${VERSION}" -ci $true
             # TODO: windows installer validation
           fi
+      - name: Upload Installer Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}-${{ matrix.architecture }}
+          path: |
+            ${{ github.workspace }}/output/*.deb
+            ${{ github.workspace }}/output/*.pkg
+            ${{ github.workspace }}/output/*.msi
+    release:
+      if: startsWith(github.ref, 'refs/tags/v')
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Download all artifacts
+          uses: actions/download-artifact@v4
+          with:
+            path: ./dist
+
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            name: Release ${{ github.ref_name }}
+            tag_name: ${{ github.ref_name }}
+            files: ./dist/**/*
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

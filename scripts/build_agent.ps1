@@ -25,8 +25,15 @@ function build_for_target {
     go mod download
 
     $CommitHash = (git rev-parse --short HEAD).Trim()
+    try {
+        $Version = git describe --tags --exact-match 2>$null
+        if (-not $Version) { $Version = "dev" }
+    } catch {
+        $Version = "dev"
+    }
+
     $BuildTime = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-    $LDFLAGS = "-w -s -buildmode=exe -X `"main.Version=1.0.0`" -X `"main.CommitHash=$CommitHash`" -X `"main.BuildTime=$BuildTime`""
+    $LDFLAGS = "-w -s -buildmode=exe -X `"main.Version=$Version`" -X `"main.CommitHash=$CommitHash`" -X `"main.BuildTime=$BuildTime`""
 
     Write-Host "Building executable: $EXECUTABLE_NAME for $GOOS $GOARCH..."
     $buildResult = $env:CGO_ENABLED="1"; & "go" "build" "-trimpath" "-ldflags" $LDFLAGS "-o" "$ROOT_DIR\build\$EXECUTABLE_NAME" "$ROOT_DIR\cmd\agent"

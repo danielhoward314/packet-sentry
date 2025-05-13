@@ -8,6 +8,8 @@ BUILD_ARRAY=()
 # Expect to run this build script from root directory of the project
 ROOT_DIR=$(pwd)
 
+VERSION=$(git describe --tags --exact-match 2>/dev/null || echo "dev")
+
 # Clean previous builds
 rm -rf "$ROOT_DIR/build/"
 mkdir -p "$ROOT_DIR/build"
@@ -18,8 +20,9 @@ build_for_target() {
   echo "Downloading dependencies..."
   go mod download
 
-  # TODO: replace with real version
-  LDFLAGS="-w -s -buildmode=pie -X 'main.Version=1.0.0' -X 'main.CommitHash=$(git rev-parse --short HEAD)' -X 'main.BuildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"
+  echo "building for version ${VERSION}..."
+
+  LDFLAGS="-w -s -buildmode=pie -X 'main.Version=${VERSION}' -X 'main.CommitHash=$(git rev-parse --short HEAD)' -X 'main.BuildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"
   GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED=1 go build -trimpath -ldflags "${LDFLAGS}" -o "$ROOT_DIR/build/$EXECUTABLE_NAME" "$ROOT_DIR/cmd/agent"
   if [ $? -ne 0 ]; then
     echo "Build failed for GOOS=${GOOS} GOARCH=${GOARCH}"
