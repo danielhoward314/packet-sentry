@@ -4,6 +4,9 @@ param(
     [switch]$ci
 )
 
+$wixVersion = $version -replace '-.*$', ''
+Write-Host "version used for WiX: $wixVersion"
+
 # Map GOARCH architecture to WiX platform names
 $platformMap = @{
     "amd64" = "x64"
@@ -112,7 +115,7 @@ if ($wixBinPath) {
 Write-Host "WiX Toolset found at: $wixBinPath"
 
 # Compile the WiX installer for the correct architecture and version
-&$candleExe -dPlatform="${platform}" -dVersion="${version}" "$installerDir\Product.wxs" -o "$installerDir\Product.wixobj"
+&$candleExe -dPlatform="${platform}" -dVersion="${wixVersion}" "$installerDir\Product.wxs" -o "$installerDir\Product.wixobj"
 
 # Ensure the Product.wixobj file was created
 $productWixObj = "$installerDir\Product.wixobj"
@@ -122,10 +125,10 @@ if (-Not (Test-Path $productWixObj)) {
 }
 
 # Now run light.exe to generate the MSI
-&$lightExe $productWixObj -o "$installerDir\PacketSentryInstaller_${arch}_v${version}.msi"
-if (-Not (Test-Path "$installerDir\PacketSentryInstaller_${arch}_v${version}.msi")) {
+&$lightExe $productWixObj -o "$installerDir\PacketSentryInstaller_${arch}_v${wixVersion}.msi"
+if (-Not (Test-Path "$installerDir\PacketSentryInstaller_${arch}_v${wixVersion}.msi")) {
     Write-Error "Failed to create MSI file"
     exit 1
 }
 
-Write-Host "Installer built successfully: $installerDir\PacketSentryInstaller_${arch}_v${version}.msi"
+Write-Host "Installer built successfully: $installerDir\PacketSentryInstaller_${arch}_v${wixVersion}.msi"
