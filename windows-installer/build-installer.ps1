@@ -1,6 +1,7 @@
 param(
     [string]$arch = "amd64",
     [string]$version = "1.0.0"
+    [switch]$ci
 )
 
 # Map GOARCH architecture to WiX platform names

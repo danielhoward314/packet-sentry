@@ -129,7 +129,7 @@ jobs:
             echo "building Go binaries for windows ${{ matrix.architecture }}"
             pwsh ./scripts/build_agent.ps1 "${{ matrix.architecture }}"
             # TODO: use git to get version
-            pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version "${VERSION}" -ci $true
+            pwsh ./windows-installer/build-installer.ps1 -arch "${{ matrix.architecture }}" -version "${VERSION}" -ci
             # TODO: windows installer validation
           fi
       - name: Upload Installer Artifact
