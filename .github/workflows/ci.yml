@@ -77,16 +77,28 @@ jobs:
       - name: Build Go Binary and Installer for ${{ matrix.os }} ${{ matrix.architecture }}
         shell: bash
         run: |
+          set -euo pipefail
+
+          # Extract version from GitHub ref
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
+            RAW_VERSION="${GITHUB_REF#refs/tags/}"
+            VERSION="${RAW_VERSION#v}"  # Strip leading 'v' if present
+
+            # Validate semver: MAJOR.MINOR.PATCH(-PRERELEASE)?(+BUILD)?
+            if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([\-+][a-zA-Z0-9\.-]+)?$ ]]; then
+              echo "❌ Invalid semver tag: $RAW_VERSION"
+              exit 1
+            fi
           elif [[ "$GITHUB_REF" == refs/heads/* ]]; then
             BRANCH="${GITHUB_REF#refs/heads/}"
-            VERSION="0.0.0-${BRANCH}-${GITHUB_SHA::7}"
+            VERSION="0.0.0-${BRANCH//\//-}-${GITHUB_SHA::7}"
           else
             VERSION="0.0.0-unknown-${GITHUB_SHA::7}"
           fi
 
-          echo "Derived version: $VERSION"
+          echo "✅ Derived version: $VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
 
           echo "version from github ref is ${VERSION}"
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
