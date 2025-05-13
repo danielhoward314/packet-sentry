@@ -10,6 +10,6 @@ In addition to checking the validity of the signature of the JWT, the applicatio
 
 For XHR requests from the Vue SPA to the API, this application uses [axios](https://axios-http.com/docs/intro). A handful of routes for account creation and authentication use the native browser `fetch`, since these do not need the same interceptors. The axios client is used for the rest of the XHR calls.
 
-The code that defines the base client configuration lives in `./packet-sentry-spa/src/api/base.js`. Other files, such as the `./packet-sentry-spa/src/api/providers.js`, group all of the APIs for a RESTful resource into a single file. The `./packet-sentry-spa/src/api/index.js` is a file only used to group all of the methods into a single export.
+The code that defines the base client configuration lives in `./packet-sentry-web-console/src/lib/axiosBaseClient.ts`. The file `./packet-sentry-web-console/src/lib/api.ts` defines the API calls that use the axios base client.
 
 The base client defines an interceptor that checks for the presence of an API access token in localStorage and, when present, uses the token in the `Authorization: Bearer <api_access_token>` header. If the access token is invalid, the `gateway` container's middleware returns a 401 to allow API clients to use their refresh token to get a new access token. The interceptor implements this refresh call and, when successful, retries the original request.

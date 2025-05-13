@@ -188,9 +188,3 @@ curl --cacert ./certs/ca.cert.pem -X PUT https://gateway.packet-sentry.local:808
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>" \
     -d '{"osUniqueIdentifier": "<os-id>", "organizationId": "<org-id>", "pcapVersion": "<version>", "clientCertPem": "<cert-pem>", "clientCertFingerprint": "<fingerprint>", "interfaces": ["<interface-name>"], "interface_bpf_associations": {"lo": {"captures": {"8652061650958524491": {"bpf": "tcp port 3000", "deviceName": "lo", "snaplen": 65535}}}}}'
-
-
-curl --cacert ./certs/ca.cert.pem -X PUT https://gateway.packet-sentry.local:8080/v1/administrators/f9e45b10-2ba9-4a32-a1ea-954ae2d6543e \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemF0aW9uX3JvbGUiOiJQUklNQVJZX0FETUlOIiwib3JnYW5pemF0aW9uX2lkIjoiYThmODA4ZWItYzZhNi00MzQ1LTg1ZDAtZTZiNjJjNjg0ZDU2IiwiaXNzIjoid2ViLWFwaS5wYWNrZXQtc2VudHJ5Iiwic3ViIjoiZjllNDViMTAtMmJhOS00YTMyLWExZWEtOTU0YWUyZDY1NDNlIiwiYXVkIjpbInBhY2tldC1zZW50cnktYXBpIl0sImV4cCI6MTc0NjU4NzE2NywiaWF0IjoxNzQ2NTg2MjY3LCJqdGkiOiI5YjYwODIxMi1iODQ3LTQ0ZDYtOTg0ZC0wMmI5ODVmNmE3OTcifQ.BjhrsoM9wrxYb8sGVMrBi_9pcRu6TqyjxABrL9YxVWw" \
-    -d '{"email": "b@c.com"}'
