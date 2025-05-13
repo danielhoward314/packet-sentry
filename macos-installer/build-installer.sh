@@ -50,8 +50,23 @@ sed -i '' -E "s/(<pkg-ref id=\"com\.danielhoward314\.packet-sentry-agent\" versi
 sed -i '' -E "s/(<product version=\")([^\"]+)(\"\/>)/\1$VERSION\3/" distribution.xml
 echo "Generated distribution.xml with version $VERSION"
 
-pkgbuild --root ../build --identifier com.danielhoward314.packet-sentry-agent --scripts scripts --version "${VERSION}" --ownership recommended agent.pkg
-productbuild --distribution "./distribution.xml" --resources "./resources" --version "${VERSION}" packet-sentry-agent.pkg
+PKG_NAME="packet-sentry-agent_${VERSION}_${ARCH}.pkg"
+
+pkgbuild \
+  --root ../build \
+  --identifier com.danielhoward314.packet-sentry-agent \
+  --scripts scripts \
+  --version "${VERSION}" \
+  --ownership recommended \
+  agent-${ARCH}.pkg
+
+productbuild \
+  --distribution "./distribution.xml" \
+  --resources "./resources" \
+  --version "${VERSION}" \
+  "./package/${PKG_NAME}"
+
+echo "Built ${PKG_NAME}"
 popd
 
 echo "Successfully built macOS installer pkg."

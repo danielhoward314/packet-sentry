@@ -141,7 +141,7 @@ jobs:
             ${{
               matrix.os == 'ubuntu-latest' && './linux-installer/build/debfinalout/*.deb' ||
               matrix.os == 'ubuntu-24.04-arm' && './linux-installer/build/debfinalout/*.deb' ||
-              matrix.os == 'macos-latest' && './macos-installer/package/*.pkg' ||
+              matrix.os == 'macos-latest' && './macos-installer/package/packet-sentry-agent_*_*.pkg' ||
               './windows-installer/*.msi'
             }}
 
