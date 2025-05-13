@@ -78,6 +78,8 @@ fi
 VERSION="$1"
 ARCH="$2"
 echo "validating installer for ${ARCH} and version: ${VERSION}"
+PKG_FILENAME="packet-sentry-agent_${VERSION}_${ARCH}.pkg"
+echo "expecting pkg file name ${PKG_FILENAME}"
 
 pushd "$ROOT_DIR/macos-installer/package"
 
@@ -96,7 +98,7 @@ pushd "$ROOT_DIR/macos-installer/package"
 # Clean up previous expansions.
 rm -rf expanded
 
-pkgutil --expand packet-sentry-agent.pkg expanded
+pkgutil --expand "${PKG_FILENAME}" expanded
 cd ./expanded
 
 # Check if at least one <pkg-ref> contains the correct version
