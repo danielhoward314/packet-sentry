@@ -64,7 +64,7 @@ productbuild \
   --distribution "./distribution.xml" \
   --resources "./resources" \
   --version "${VERSION}" \
-  "./package/${PKG_NAME}"
+  "${PKG_NAME}"
 
 echo "Built ${PKG_NAME}"
 popd
