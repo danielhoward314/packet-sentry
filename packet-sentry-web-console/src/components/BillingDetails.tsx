@@ -138,8 +138,18 @@ export function BillingDetails({
   };
   const creditCardFields: CreditCardField[] = [
     { type: "text", label: "Name on Card", id: "cardHolderName", options: [] },
-    { type: "text", label: "Billing Address", id: "billingAddressLineOne", options: [] },
-    { type: "text", label: "Billing Address (Line 2)", id: "billingAddressLineTwo", options: [] },
+    {
+      type: "text",
+      label: "Billing Address",
+      id: "billingAddressLineOne",
+      options: [],
+    },
+    {
+      type: "text",
+      label: "Billing Address (Line 2)",
+      id: "billingAddressLineTwo",
+      options: [],
+    },
     {
       type: "creditCardNumber",
       label: "Card Number",
@@ -306,7 +316,8 @@ export function BillingDetails({
       <Label className="text-lg font-bold">Payment Method</Label>
       <div className="flex justify-between">
         <p className="text-muted-foreground text-balance">
-          {existingOrganization.maskedCreditCard ?? "No existing payment method."}
+          {existingOrganization.maskedCreditCard ??
+            "No existing payment method."}
         </p>
         <Dialog
           open={openPaymentMethodDialog}
@@ -352,7 +363,7 @@ export function BillingDetails({
                   )}
                 />
 
-                                <FormField
+                <FormField
                   key={creditCardFields[1].id}
                   control={creditCardForm.control}
                   name={creditCardFields[1].id}
@@ -377,7 +388,7 @@ export function BillingDetails({
                   )}
                 />
 
-                                <FormField
+                <FormField
                   key={creditCardFields[2].id}
                   control={creditCardForm.control}
                   name={creditCardFields[2].id}

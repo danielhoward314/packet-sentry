@@ -127,10 +127,14 @@ export type PaymentDetails = {
   expirationMonth: string;
   expirationYear: string;
   cvc: string;
-}
+};
 
 export type UpdateOrganizationRequest = {
   name?: string;
   billingPlan?: string;
   paymentDetails?: PaymentDetails;
 };
+
+export interface CreateInstallKeyRequest {
+  administratorEmail: string;
+}

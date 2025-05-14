@@ -66,7 +66,6 @@ export default function BillingPage() {
       }
       toastSuccessMsg = "Your billing plan has been updated.";
     } else if (formName === "creditCardForm") {
-      console.log(data)
       try {
         const response = await updateOrganization(existingOrg.id, {
           paymentDetails: {
@@ -77,7 +76,7 @@ export default function BillingPage() {
             expirationMonth: data.expirationMonth as string,
             expirationYear: data.expirationYear as string,
             cvc: data.cvc as string,
-          }
+          },
         });
 
         if (response.status < 200 || response.status >= 400) {

@@ -1,6 +1,7 @@
 import {
   ActivateAdministratorRequest,
   CreateAdministratorRequest,
+  CreateInstallKeyRequest,
   UpdateAdministratorRequest,
   UpdateOrganizationRequest,
 } from "@/types/api";
@@ -48,4 +49,11 @@ export async function activateAdministrator(
   request: ActivateAdministratorRequest,
 ): Promise<AxiosResponse<void>> {
   return baseClient.post("/activate", request);
+}
+
+export async function createInstallKey(
+  request: CreateInstallKeyRequest,
+): Promise<any> {
+  const response = await baseClient.post("/install-keys", request);
+  return response.data
 }
