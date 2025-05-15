@@ -55,5 +55,15 @@ export async function createInstallKey(
   request: CreateInstallKeyRequest,
 ): Promise<any> {
   const response = await baseClient.post("/install-keys", request);
-  return response.data
+  return response.data;
+}
+
+export async function listDevices(organizationId: string): Promise<any> {
+  const res = await baseClient.get(`/devices?organizationId=${organizationId}`);
+  return res.data;
+}
+
+export async function getDevice(id: string): Promise<any> {
+  const res = await baseClient.get(`/devices/${id}`);
+  return res.data;
 }

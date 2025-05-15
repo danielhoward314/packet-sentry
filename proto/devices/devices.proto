@@ -67,6 +67,8 @@ message GetDeviceResponse {
     string client_cert_fingerprint = 5;
     map<string, InterfaceCaptureMap> interface_bpf_associations = 6;
     map<string, InterfaceCaptureMap> previous_associations = 7;
+    string pcap_version = 8;
+    repeated string interfaces = 9;
 }
 
 message ListDevicesResponse {

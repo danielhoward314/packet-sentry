@@ -383,6 +383,8 @@ type GetDeviceResponse struct {
 	ClientCertFingerprint    string                          `protobuf:"bytes,5,opt,name=client_cert_fingerprint,json=clientCertFingerprint,proto3" json:"client_cert_fingerprint,omitempty"`
 	InterfaceBpfAssociations map[string]*InterfaceCaptureMap `protobuf:"bytes,6,rep,name=interface_bpf_associations,json=interfaceBpfAssociations,proto3" json:"interface_bpf_associations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	PreviousAssociations     map[string]*InterfaceCaptureMap `protobuf:"bytes,7,rep,name=previous_associations,json=previousAssociations,proto3" json:"previous_associations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	PcapVersion              string                          `protobuf:"bytes,8,opt,name=pcap_version,json=pcapVersion,proto3" json:"pcap_version,omitempty"`
+	Interfaces               []string                        `protobuf:"bytes,9,rep,name=interfaces,proto3" json:"interfaces,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -462,6 +464,20 @@ func (x *GetDeviceResponse) GetInterfaceBpfAssociations() map[string]*InterfaceC
 func (x *GetDeviceResponse) GetPreviousAssociations() map[string]*InterfaceCaptureMap {
 	if x != nil {
 		return x.PreviousAssociations
+	}
+	return nil
+}
+
+func (x *GetDeviceResponse) GetPcapVersion() string {
+	if x != nil {
+		return x.PcapVersion
+	}
+	return ""
+}
+
+func (x *GetDeviceResponse) GetInterfaces() []string {
+	if x != nil {
+		return x.Interfaces
 	}
 	return nil
 }
@@ -550,7 +566,7 @@ const file_devices_devices_proto_rawDesc = "" +
 	"\bcaptures\x18\x01 \x03(\v2*.devices.InterfaceCaptureMap.CapturesEntryR\bcaptures\x1aS\n" +
 	"\rCapturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x04R\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.devices.CaptureConfigR\x05value:\x028\x01\"\x93\x05\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.devices.CaptureConfigR\x05value:\x028\x01\"\xd6\x05\n" +
 	"\x11GetDeviceResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x120\n" +
@@ -558,7 +574,11 @@ const file_devices_devices_proto_rawDesc = "" +
 	"\x0fclient_cert_pem\x18\x04 \x01(\tR\rclientCertPem\x126\n" +
 	"\x17client_cert_fingerprint\x18\x05 \x01(\tR\x15clientCertFingerprint\x12v\n" +
 	"\x1ainterface_bpf_associations\x18\x06 \x03(\v28.devices.GetDeviceResponse.InterfaceBpfAssociationsEntryR\x18interfaceBpfAssociations\x12i\n" +
-	"\x15previous_associations\x18\a \x03(\v24.devices.GetDeviceResponse.PreviousAssociationsEntryR\x14previousAssociations\x1ai\n" +
+	"\x15previous_associations\x18\a \x03(\v24.devices.GetDeviceResponse.PreviousAssociationsEntryR\x14previousAssociations\x12!\n" +
+	"\fpcap_version\x18\b \x01(\tR\vpcapVersion\x12\x1e\n" +
+	"\n" +
+	"interfaces\x18\t \x03(\tR\n" +
+	"interfaces\x1ai\n" +
 	"\x1dInterfaceBpfAssociationsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x05value\x18\x02 \x01(\v2\x1c.devices.InterfaceCaptureMapR\x05value:\x028\x01\x1ae\n" +

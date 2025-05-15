@@ -29,6 +29,7 @@ import NewAdministrator from "./pages/NewAdministrator";
 import { AxiosInterceptorProvider } from "@/contexts/AxiosProvider";
 import UpdateAdministrator from "./pages/UpdateAdministrator";
 import ActivateAdministrator from "./pages/ActivateAdministrator";
+import UpdateDevice from "./pages/UpdateDevice";
 
 function App() {
   return (
@@ -93,6 +94,10 @@ function App() {
                 <Route path="home" element={<Home />} />
                 <Route path="devices/list" element={<DevicesList />} />
                 <Route path="devices/new" element={<NewDevice />} />
+                <Route
+                  path="devices/update/:id"
+                  element={<UpdateDevice />}
+                />
                 <Route path="administrators" element={<AdministratorsList />} />
                 <Route
                   path="administrators/new"

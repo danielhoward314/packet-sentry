@@ -24,7 +24,7 @@ export function DeviceOnboarding() {
   const [existingAdmin, setExistingAdmin] =
     useState<GetAdministratorResponse | null>(null);
   const [step, setStep] = useState<string>("os");
-  const [os, setOs] = useState<OSKey>('Unknown');
+  const [os, setOs] = useState<OSKey>("Unknown");
   const [installers, setInstallers] = useState<Map<string, string>>(new Map());
   const [installKey, setInstallKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -121,12 +121,12 @@ export function DeviceOnboarding() {
   const handleCreateInstallKey = async () => {
     try {
       const response = await createInstallKey({
-        administratorEmail: existingAdmin?.email ?? '',
+        administratorEmail: existingAdmin?.email ?? "",
       });
 
-      setInstallKey(response?.installKey ?? '');
+      setInstallKey(response?.installKey ?? "");
     } catch (e) {
-      setError('Failed to create install key for new device.')
+      setError("Failed to create install key for new device.");
     }
   };
 
@@ -189,7 +189,7 @@ export function DeviceOnboarding() {
                     {key}
                   </Button>
                 ))
-              ): (
+              ) : (
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               )}
             </div>
@@ -234,18 +234,21 @@ export function DeviceOnboarding() {
       </TabsContent>
 
       <TabsContent value="summary">
-        {os === 'Unknown' ? (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>This onboarding wizard has run into an error. Restart the sequence.</AlertDescription>
-      </Alert>
+        {os === "Unknown" ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              This onboarding wizard has run into an error. Restart the
+              sequence.
+            </AlertDescription>
+          </Alert>
         ) : (
-        <Card>
-          <CardContent className="p-6 grid gap-4">
-            <InstallInstructions os={os} />
-          </CardContent>
-        </Card>
+          <Card>
+            <CardContent className="p-6 grid gap-4">
+              <InstallInstructions os={os} />
+            </CardContent>
+          </Card>
         )}
       </TabsContent>
     </Tabs>

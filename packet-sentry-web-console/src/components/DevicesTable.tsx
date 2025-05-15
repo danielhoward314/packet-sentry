@@ -13,9 +13,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { AlertCircle, ChevronDown, Loader2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -36,156 +36,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const data: Device[] = [
-  {
-    id: "m5gr84i9",
-    name: "Boogie",
-    osUniqueIdentifier: "osUniqueId here",
-    clientCertFingerprint: "cert fingerprint here",
-    organizationId: "org id here",
-    pcapVersion: "pcapVersionHere",
-    interfaces: ["lo", "en0", "bluetooth"],
-  },
-  {
-    id: "3u1reuv4",
-    name: "Rabbit",
-    osUniqueIdentifier: "osUniqueId here",
-    clientCertFingerprint: "cert fingerprint here",
-    organizationId: "org id here",
-    pcapVersion: "pcapVersionHere",
-    interfaces: ["lo", "en0", "bluetooth"],
-  },
-  {
-    id: "derv1ws0",
-    name: "Crusader",
-    osUniqueIdentifier: "osUniqueId here",
-    clientCertFingerprint: "cert fingerprint here",
-    organizationId: "org id here",
-    pcapVersion: "pcapVersionHere",
-    interfaces: ["lo", "en0", "bluetooth"],
-  },
-];
-
-export interface Device {
-  id: string; // UUID
-  name: string;
-  osUniqueIdentifier: string;
-  clientCertFingerprint: string;
-  organizationId: string; // UUID
-  pcapVersion: string;
-  interfaces: string[]; // TEXT[]
-}
-
-export const columns: ColumnDef<Device>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "name",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Name
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue("name")}</div>,
-  },
-  {
-    accessorKey: "osUniqueIdentifier",
-    header: "OS UID",
-    cell: ({ row }) => <div>{row.getValue("osUniqueIdentifier")}</div>,
-  },
-  {
-    accessorKey: "clientCertFingerprint",
-    header: "Certificate Fingerprint",
-    cell: ({ row }) => <div>{row.getValue("clientCertFingerprint")}</div>,
-  },
-  {
-    accessorKey: "pcapVersion",
-    header: "pcap Version",
-    cell: ({ row }) => <div>{row.getValue("pcapVersion")}</div>,
-  },
-  {
-    accessorKey: "interfaces",
-    header: "Interfaces",
-    cell: ({ row }) => {
-      const interfaces = row.getValue("interfaces") as string[];
-
-      return (
-        <div className="flex flex-wrap gap-2">
-          {interfaces.length > 0 ? (
-            interfaces.map((iface, idx) => (
-              <Badge key={idx} variant="outline">
-                {iface}
-              </Badge>
-            ))
-          ) : (
-            <span className="text-muted-foreground italic">-</span>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const device = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => console.log("edit config: ", device.id)}
-            >
-              Edit Configuration
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => console.log("delete: ", device.id)}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
+import { listDevices } from "@/lib/api";
+import { GetDeviceResponse } from "@/types/api";
+import { useAdminUser } from "@/contexts/AdminUserContext";
+import { useNavigate } from "react-router-dom";
 
 export function DevicesTable() {
+  const navigate = useNavigate();
+  const { adminUser, refreshAdminUser } = useAdminUser();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -193,6 +51,116 @@ export function DevicesTable() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [data, setData] = React.useState<GetDeviceResponse[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!adminUser?.id) {
+      refreshAdminUser();
+      if (!adminUser?.id) {
+        console.error("admin user not in context after refresh");
+        return;
+      }
+    }
+
+    const fetchData = async () => {
+      try {
+        const responseData = await listDevices(adminUser.organizationId);
+        setData(responseData?.devices ?? []);
+      } catch (err) {
+        setError("Failed to load devices.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [adminUser?.organizationId]);
+
+  const columns: ColumnDef<GetDeviceResponse>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "osUniqueIdentifier",
+      header: "OS UID",
+      cell: ({ row }) => <div>{row.getValue("osUniqueIdentifier")}</div>,
+    },
+    {
+      accessorKey: "pcapVersion",
+      header: "pcap Version",
+      cell: ({ row }) => <div>{row.getValue("pcapVersion")}</div>,
+    },
+    {
+      accessorKey: "interfaces",
+      header: "Interfaces",
+      cell: ({ row }) => {
+        const interfaces = row.getValue("interfaces") as string[];
+
+        return (
+          <div className="flex flex-wrap gap-2">
+            {interfaces.length > 0 ? (
+              interfaces.map((iface, idx) => (
+                <Badge key={idx} variant="outline">
+                  {iface}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-muted-foreground italic">-</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const device = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => navigate(`/devices/update/${device.id}`)}
+              >
+                Edit Configuration
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
 
   const table = useReactTable({
     data,
@@ -212,6 +180,25 @@ export function DevicesTable() {
       rowSelection,
     },
   });
+
+    if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load devices in your organization.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="w-full">

@@ -106,6 +106,8 @@ func (ds *devicesService) Get(ctx context.Context, request *pbDevices.GetDeviceR
 		ClientCertFingerprint:    device.ClientCertFingerprint,
 		InterfaceBpfAssociations: pbAssociations,
 		PreviousAssociations:     pbPreviousAssociations,
+		PcapVersion:              device.PCapVersion,
+		Interfaces:               device.Interfaces,
 	}, nil
 }
 
@@ -177,6 +179,8 @@ func (ds *devicesService) List(ctx context.Context, request *pbDevices.ListDevic
 			ClientCertFingerprint:    device.ClientCertFingerprint,
 			InterfaceBpfAssociations: pbAssociations,
 			PreviousAssociations:     pbPreviousAssociations,
+			PcapVersion:              device.PCapVersion,
+			Interfaces:               device.Interfaces,
 		})
 	}
 

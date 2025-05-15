@@ -138,3 +138,27 @@ export type UpdateOrganizationRequest = {
 export interface CreateInstallKeyRequest {
   administratorEmail: string;
 }
+
+export interface GetDeviceResponse {
+  id: string;
+  organizationId: string;
+  osUniqueIdentifier: string;
+  clientCertPem: string;
+  clientCertFingerprint: string;
+  interfaceBpfAssociations?: Record<string, InterfaceCaptureMap>;
+  previousAssociations?: Record<string, InterfaceCaptureMap>;
+  pcapVersion: string;
+  interfaces: string[];
+}
+
+export interface InterfaceCaptureMap {
+  captures: Record<string, CaptureConfig>; // keys are uint64, use string in TS for JSON compatibility
+}
+
+export interface CaptureConfig {
+  bpf?: string;
+  deviceName?: string;
+  promiscuous?: boolean;
+  snapLen?: number;
+  timeout?: number;
+}
