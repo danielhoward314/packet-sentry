@@ -3,6 +3,7 @@ import {
   CreateAdministratorRequest,
   CreateInstallKeyRequest,
   UpdateAdministratorRequest,
+  UpdateDeviceRequest,
   UpdateOrganizationRequest,
 } from "@/types/api";
 import baseClient from "./axiosBaseClient";
@@ -66,4 +67,11 @@ export async function listDevices(organizationId: string): Promise<any> {
 export async function getDevice(id: string): Promise<any> {
   const res = await baseClient.get(`/devices/${id}`);
   return res.data;
+}
+
+export async function updateDevice(
+  id: string,
+  request: UpdateDeviceRequest,
+): Promise<AxiosResponse<void>> {
+  return baseClient.put(`/devices/${id}`, request);
 }

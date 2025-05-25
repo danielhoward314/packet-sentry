@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/cespare/xxhash/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -193,44 +194,46 @@ func (ds *devicesService) Update(ctx context.Context, request *pbDevices.UpdateD
 		ds.logger.Error("invalid device id")
 		return nil, status.Errorf(codes.InvalidArgument, "invalid device id")
 	}
-	if request.OsUniqueIdentifier == "" {
-		ds.logger.Error("invalid os_unique_identifier")
-		return nil, status.Errorf(codes.InvalidArgument, "invalid os_unique_identifier")
+	device, err := ds.datastore.Devices.GetDeviceByPredicate(postgres.PredicateID, request.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "device not found: %s", err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to read device data: %s", err.Error())
 	}
-	if request.ClientCertPem == "" {
-		ds.logger.Error("invalid client_cert_pem id")
-		return nil, status.Errorf(codes.InvalidArgument, "invalid client_cert_pem id")
+	if device == nil {
+		return nil, status.Error(codes.Internal, "failed to read device data")
 	}
-	if request.ClientCertFingerprint == "" {
-		ds.logger.Error("invalid client_cert_fingerprint id")
-		return nil, status.Errorf(codes.InvalidArgument, "invalid client_cert_fingerprint id")
+	if request.ClientCertPem != "" {
+		device.ClientCertPEM = request.ClientCertPem
 	}
-	if request.OrganizationId == "" {
-		ds.logger.Error("invalid organization_id id")
-		return nil, status.Errorf(codes.InvalidArgument, "invalid organization_id id")
+	if request.ClientCertFingerprint != "" {
+		device.ClientCertFingerprint = request.ClientCertFingerprint
 	}
-	device := &dao.Device{
-		ID:                    request.Id,
-		OSUniqueIdentifier:    request.OsUniqueIdentifier,
-		OrganizationID:        request.OrganizationId,
-		PCapVersion:           request.PcapVersion,
-		Interfaces:            request.Interfaces,
-		ClientCertPEM:         request.ClientCertPem,
-		ClientCertFingerprint: request.ClientCertFingerprint,
+	if request.ClientCertFingerprint != "" {
+		device.ClientCertFingerprint = request.ClientCertFingerprint
+	}
+	if len(request.Interfaces) > 0 {
+		device.Interfaces = request.Interfaces
+	}
+	if request.PcapVersion != "" {
+		device.PCapVersion = request.PcapVersion
 	}
 
+	device.PreviousAssociations = device.InterfaceBPFAssociations
+
 	daoAssociations := make(map[string]map[uint64]dao.CaptureConfig)
-	daoPreviousAssociations := make(map[string]map[uint64]dao.CaptureConfig)
 
 	for ifaceName, pbInterfaceToBPFMap := range request.InterfaceBpfAssociations {
 		_, ok := request.InterfaceBpfAssociations[ifaceName]
 		if !ok {
 			daoAssociations[ifaceName] = make(map[uint64]dao.CaptureConfig)
 		}
-		for pbBPFHash, pbCaptureConfig := range pbInterfaceToBPFMap.Captures {
+		for pbBPF, pbCaptureConfig := range pbInterfaceToBPFMap.Captures {
 			if daoAssociations[ifaceName] == nil {
 				daoAssociations[ifaceName] = make(map[uint64]dao.CaptureConfig)
 			}
+			pbBPFHash := xxhash.Sum64([]byte(pbBPF))
 			daoAssociations[ifaceName][pbBPFHash] = dao.CaptureConfig{
 				Bpf:         pbCaptureConfig.Bpf,
 				DeviceName:  pbCaptureConfig.DeviceName,
@@ -240,28 +243,9 @@ func (ds *devicesService) Update(ctx context.Context, request *pbDevices.UpdateD
 		}
 	}
 
-	for previousIfaceName, pbPreviousInterfaceToBPFMap := range request.PreviousAssociations {
-		_, ok := request.PreviousAssociations[previousIfaceName]
-		if !ok {
-			daoPreviousAssociations[previousIfaceName] = make(map[uint64]dao.CaptureConfig)
-		}
-		for pbPreviousBPFHash, pbPreviousCaptureConfig := range pbPreviousInterfaceToBPFMap.Captures {
-			if daoPreviousAssociations[previousIfaceName] == nil {
-				daoPreviousAssociations[previousIfaceName] = make(map[uint64]dao.CaptureConfig)
-			}
-			daoPreviousAssociations[previousIfaceName][pbPreviousBPFHash] = dao.CaptureConfig{
-				Bpf:         pbPreviousCaptureConfig.Bpf,
-				DeviceName:  pbPreviousCaptureConfig.DeviceName,
-				Promiscuous: pbPreviousCaptureConfig.Promiscuous,
-				SnapLen:     int32(pbPreviousCaptureConfig.SnapLen),
-			}
-		}
-	}
-
 	device.InterfaceBPFAssociations = daoAssociations
-	device.PreviousAssociations = daoPreviousAssociations
 
-	err := ds.datastore.Devices.Update(device)
+	err = ds.datastore.Devices.Update(device)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}

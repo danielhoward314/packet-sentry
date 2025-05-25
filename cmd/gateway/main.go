@@ -23,6 +23,7 @@ import (
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
+	psWebSockets "github.com/danielhoward314/packet-sentry/websockets"
 )
 
 const (
@@ -106,6 +107,14 @@ func main() {
 		log.Fatal("error: ACCESS_TOKEN_SECRET is empty")
 	}
 
+	corsEnv := os.Getenv("CORS_ALLOW_LIST")
+	if len(corsEnv) == 0 {
+		corsEnv = "http://localhost:5173"
+	}
+	corsAllowList := strings.Split(corsEnv, ",")
+
+	webSocketHandler := psWebSockets.NewWebSocketHandler(corsAllowList, accessTokenJWTSecret, logger)
+
 	// endpoints the authorization middleware skips checking API access token
 	pathsWithoutAuthorization := []string{
 		"/v1/signup",
@@ -129,11 +138,6 @@ func main() {
 
 	middlewareWrappedMux := loggingMiddleware(authMiddleware(mux))
 
-	corsEnv := os.Getenv("CORS_ALLOW_LIST")
-	if len(corsEnv) == 0 {
-		corsEnv = "http://localhost:5173"
-	}
-	corsAllowList := strings.Split(corsEnv, ",")
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowList,                                       // Allow only these origins
 		AllowedMethods:   []string{"OPTIONS", "GET", "POST", "PUT", "DELETE"}, // Allow specific methods
@@ -141,10 +145,14 @@ func main() {
 		AllowCredentials: true,                                                // Allow credentials
 	}).Handler(middlewareWrappedMux)
 
+	rootMux := http.NewServeMux()
+	rootMux.Handle("/ws", webSocketHandler) // Handles WebSocket upgrades
+	rootMux.Handle("/", corsHandler)        // All other routes through gRPC-Gateway with middleware
+
 	gatewayAddr := "[::]" + ":" + "8080"
 	server := http.Server{
 		Addr:         gatewayAddr,
-		Handler:      corsHandler,
+		Handler:      rootMux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,

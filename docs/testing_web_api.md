@@ -187,4 +187,4 @@ curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:808
 curl --cacert ./certs/ca.cert.pem -X PUT https://gateway.packet-sentry.local:8080/v1/devices/750baff0-8c7f-4982-a0c8-04e415adfdae \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>" \
-    -d '{"osUniqueIdentifier": "<os-id>", "organizationId": "<org-id>", "pcapVersion": "<version>", "clientCertPem": "<cert-pem>", "clientCertFingerprint": "<fingerprint>", "interfaces": ["<interface-name>"], "interface_bpf_associations": {"lo": {"captures": {"8652061650958524491": {"bpf": "tcp port 3000", "deviceName": "lo", "snaplen": 65535}}}}}'
+    -d '{"pcapVersion": "<version>", "clientCertPem": "<cert-pem>", "clientCertFingerprint": "<fingerprint>", "interfaces": ["<interface-name>"], "interface_bpf_associations": {"lo": {"captures": {"tcp port 3000": {"bpf": "tcp port 3000", "deviceName": "lo", "snaplen": 65535}}}}}'

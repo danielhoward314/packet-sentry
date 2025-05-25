@@ -160,7 +160,7 @@ Property '__ENV__' does not exist on type 'Window & typeof globalThis'.
 
 We extend the type in `./packet-sentry-web-console/src/types` and add that path in the `tsconfig.app.json`.
 
-Making Chrome trust my local self-signed certs on Pop!_OS:
+Making Chrome trust my local self-signed certs on Ubuntu:
 
 ```
 sudo cp certs/ca.cert.pem /usr/local/share/ca-certificates/packet-sentry-dev-ca.crt

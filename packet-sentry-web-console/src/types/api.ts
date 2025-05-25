@@ -162,3 +162,11 @@ export interface CaptureConfig {
   snapLen?: number;
   timeout?: number;
 }
+
+export interface UpdateDeviceRequest {
+  pcapVersion: string;
+  interfaces: string[];
+  clientCertPem: string;
+  clientCertFingerprint: string;
+  interfaceBpfAssociations?: Record<string, InterfaceCaptureMap>;
+}

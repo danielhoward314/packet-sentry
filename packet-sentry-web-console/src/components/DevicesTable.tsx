@@ -13,7 +13,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { AlertCircle, ChevronDown, Loader2, MoreHorizontal } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  Loader2,
+  MoreHorizontal,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -181,7 +186,7 @@ export function DevicesTable() {
     },
   });
 
-    if (loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

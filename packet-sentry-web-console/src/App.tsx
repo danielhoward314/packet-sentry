@@ -94,10 +94,7 @@ function App() {
                 <Route path="home" element={<Home />} />
                 <Route path="devices/list" element={<DevicesList />} />
                 <Route path="devices/new" element={<NewDevice />} />
-                <Route
-                  path="devices/update/:id"
-                  element={<UpdateDevice />}
-                />
+                <Route path="devices/update/:id" element={<UpdateDevice />} />
                 <Route path="administrators" element={<AdministratorsList />} />
                 <Route
                   path="administrators/new"

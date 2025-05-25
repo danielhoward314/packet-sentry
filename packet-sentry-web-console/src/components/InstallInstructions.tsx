@@ -20,9 +20,9 @@ export function InstallInstructions({ os }: InstallInstructionsProps) {
         </pre>
       ) : (
         <pre className="bg-muted p-2 rounded text-sm whitespace-pre-wrap">
-        <code className="bg-muted px-2 py-1 rounded text-sm">
-          {INSTALLER_INSTRUCTIONS[os]}
-        </code>
+          <code className="bg-muted px-2 py-1 rounded text-sm">
+            {INSTALLER_INSTRUCTIONS[os]}
+          </code>
         </pre>
       )}
     </>

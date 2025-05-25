@@ -147,16 +147,13 @@ func (x *ListDevicesRequest) GetOrganizationId() string {
 }
 
 type UpdateDeviceRequest struct {
-	state                    protoimpl.MessageState          `protogen:"open.v1"`
-	Id                       string                          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrganizationId           string                          `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	PcapVersion              string                          `protobuf:"bytes,3,opt,name=pcap_version,json=pcapVersion,proto3" json:"pcap_version,omitempty"`
-	Interfaces               []string                        `protobuf:"bytes,4,rep,name=interfaces,proto3" json:"interfaces,omitempty"`
-	OsUniqueIdentifier       string                          `protobuf:"bytes,5,opt,name=os_unique_identifier,json=osUniqueIdentifier,proto3" json:"os_unique_identifier,omitempty"`
-	ClientCertPem            string                          `protobuf:"bytes,6,opt,name=client_cert_pem,json=clientCertPem,proto3" json:"client_cert_pem,omitempty"`
-	ClientCertFingerprint    string                          `protobuf:"bytes,7,opt,name=client_cert_fingerprint,json=clientCertFingerprint,proto3" json:"client_cert_fingerprint,omitempty"`
-	InterfaceBpfAssociations map[string]*InterfaceCaptureMap `protobuf:"bytes,8,rep,name=interface_bpf_associations,json=interfaceBpfAssociations,proto3" json:"interface_bpf_associations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	PreviousAssociations     map[string]*InterfaceCaptureMap `protobuf:"bytes,9,rep,name=previous_associations,json=previousAssociations,proto3" json:"previous_associations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state                    protoimpl.MessageState                `protogen:"open.v1"`
+	Id                       string                                `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PcapVersion              string                                `protobuf:"bytes,2,opt,name=pcap_version,json=pcapVersion,proto3" json:"pcap_version,omitempty"`
+	Interfaces               []string                              `protobuf:"bytes,3,rep,name=interfaces,proto3" json:"interfaces,omitempty"`
+	ClientCertPem            string                                `protobuf:"bytes,4,opt,name=client_cert_pem,json=clientCertPem,proto3" json:"client_cert_pem,omitempty"`
+	ClientCertFingerprint    string                                `protobuf:"bytes,5,opt,name=client_cert_fingerprint,json=clientCertFingerprint,proto3" json:"client_cert_fingerprint,omitempty"`
+	InterfaceBpfAssociations map[string]*InterfaceCaptureMapUpdate `protobuf:"bytes,6,rep,name=interface_bpf_associations,json=interfaceBpfAssociations,proto3" json:"interface_bpf_associations,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -198,13 +195,6 @@ func (x *UpdateDeviceRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdateDeviceRequest) GetOrganizationId() string {
-	if x != nil {
-		return x.OrganizationId
-	}
-	return ""
-}
-
 func (x *UpdateDeviceRequest) GetPcapVersion() string {
 	if x != nil {
 		return x.PcapVersion
@@ -217,13 +207,6 @@ func (x *UpdateDeviceRequest) GetInterfaces() []string {
 		return x.Interfaces
 	}
 	return nil
-}
-
-func (x *UpdateDeviceRequest) GetOsUniqueIdentifier() string {
-	if x != nil {
-		return x.OsUniqueIdentifier
-	}
-	return ""
 }
 
 func (x *UpdateDeviceRequest) GetClientCertPem() string {
@@ -240,16 +223,9 @@ func (x *UpdateDeviceRequest) GetClientCertFingerprint() string {
 	return ""
 }
 
-func (x *UpdateDeviceRequest) GetInterfaceBpfAssociations() map[string]*InterfaceCaptureMap {
+func (x *UpdateDeviceRequest) GetInterfaceBpfAssociations() map[string]*InterfaceCaptureMapUpdate {
 	if x != nil {
 		return x.InterfaceBpfAssociations
-	}
-	return nil
-}
-
-func (x *UpdateDeviceRequest) GetPreviousAssociations() map[string]*InterfaceCaptureMap {
-	if x != nil {
-		return x.PreviousAssociations
 	}
 	return nil
 }
@@ -374,6 +350,50 @@ func (x *InterfaceCaptureMap) GetCaptures() map[uint64]*CaptureConfig {
 	return nil
 }
 
+type InterfaceCaptureMapUpdate struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Captures      map[string]*CaptureConfig `protobuf:"bytes,1,rep,name=captures,proto3" json:"captures,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InterfaceCaptureMapUpdate) Reset() {
+	*x = InterfaceCaptureMapUpdate{}
+	mi := &file_devices_devices_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InterfaceCaptureMapUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InterfaceCaptureMapUpdate) ProtoMessage() {}
+
+func (x *InterfaceCaptureMapUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_devices_devices_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InterfaceCaptureMapUpdate.ProtoReflect.Descriptor instead.
+func (*InterfaceCaptureMapUpdate) Descriptor() ([]byte, []int) {
+	return file_devices_devices_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *InterfaceCaptureMapUpdate) GetCaptures() map[string]*CaptureConfig {
+	if x != nil {
+		return x.Captures
+	}
+	return nil
+}
+
 type GetDeviceResponse struct {
 	state                    protoimpl.MessageState          `protogen:"open.v1"`
 	Id                       string                          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -391,7 +411,7 @@ type GetDeviceResponse struct {
 
 func (x *GetDeviceResponse) Reset() {
 	*x = GetDeviceResponse{}
-	mi := &file_devices_devices_proto_msgTypes[6]
+	mi := &file_devices_devices_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +423,7 @@ func (x *GetDeviceResponse) String() string {
 func (*GetDeviceResponse) ProtoMessage() {}
 
 func (x *GetDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_devices_proto_msgTypes[6]
+	mi := &file_devices_devices_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +436,7 @@ func (x *GetDeviceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeviceResponse.ProtoReflect.Descriptor instead.
 func (*GetDeviceResponse) Descriptor() ([]byte, []int) {
-	return file_devices_devices_proto_rawDescGZIP(), []int{6}
+	return file_devices_devices_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetDeviceResponse) GetId() string {
@@ -491,7 +511,7 @@ type ListDevicesResponse struct {
 
 func (x *ListDevicesResponse) Reset() {
 	*x = ListDevicesResponse{}
-	mi := &file_devices_devices_proto_msgTypes[7]
+	mi := &file_devices_devices_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -503,7 +523,7 @@ func (x *ListDevicesResponse) String() string {
 func (*ListDevicesResponse) ProtoMessage() {}
 
 func (x *ListDevicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devices_devices_proto_msgTypes[7]
+	mi := &file_devices_devices_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -516,7 +536,7 @@ func (x *ListDevicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDevicesResponse.ProtoReflect.Descriptor instead.
 func (*ListDevicesResponse) Descriptor() ([]byte, []int) {
-	return file_devices_devices_proto_rawDescGZIP(), []int{7}
+	return file_devices_devices_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListDevicesResponse) GetDevices() []*GetDeviceResponse {
@@ -535,25 +555,19 @@ const file_devices_devices_proto_rawDesc = "" +
 	"\x10GetDeviceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"=\n" +
 	"\x12ListDevicesRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xdc\x05\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xb3\x03\n" +
 	"\x13UpdateDeviceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12!\n" +
-	"\fpcap_version\x18\x03 \x01(\tR\vpcapVersion\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fpcap_version\x18\x02 \x01(\tR\vpcapVersion\x12\x1e\n" +
 	"\n" +
-	"interfaces\x18\x04 \x03(\tR\n" +
-	"interfaces\x120\n" +
-	"\x14os_unique_identifier\x18\x05 \x01(\tR\x12osUniqueIdentifier\x12&\n" +
-	"\x0fclient_cert_pem\x18\x06 \x01(\tR\rclientCertPem\x126\n" +
-	"\x17client_cert_fingerprint\x18\a \x01(\tR\x15clientCertFingerprint\x12x\n" +
-	"\x1ainterface_bpf_associations\x18\b \x03(\v2:.devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntryR\x18interfaceBpfAssociations\x12k\n" +
-	"\x15previous_associations\x18\t \x03(\v26.devices.UpdateDeviceRequest.PreviousAssociationsEntryR\x14previousAssociations\x1ai\n" +
+	"interfaces\x18\x03 \x03(\tR\n" +
+	"interfaces\x12&\n" +
+	"\x0fclient_cert_pem\x18\x04 \x01(\tR\rclientCertPem\x126\n" +
+	"\x17client_cert_fingerprint\x18\x05 \x01(\tR\x15clientCertFingerprint\x12x\n" +
+	"\x1ainterface_bpf_associations\x18\x06 \x03(\v2:.devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntryR\x18interfaceBpfAssociations\x1ao\n" +
 	"\x1dInterfaceBpfAssociationsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.devices.InterfaceCaptureMapR\x05value:\x028\x01\x1ae\n" +
-	"\x19PreviousAssociationsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.devices.InterfaceCaptureMapR\x05value:\x028\x01\"\x97\x01\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x128\n" +
+	"\x05value\x18\x02 \x01(\v2\".devices.InterfaceCaptureMapUpdateR\x05value:\x028\x01\"\x97\x01\n" +
 	"\rCaptureConfig\x12\x10\n" +
 	"\x03bpf\x18\x01 \x01(\tR\x03bpf\x12\x1e\n" +
 	"\n" +
@@ -566,6 +580,11 @@ const file_devices_devices_proto_rawDesc = "" +
 	"\bcaptures\x18\x01 \x03(\v2*.devices.InterfaceCaptureMap.CapturesEntryR\bcaptures\x1aS\n" +
 	"\rCapturesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x04R\x03key\x12,\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.devices.CaptureConfigR\x05value:\x028\x01\"\xbe\x01\n" +
+	"\x19InterfaceCaptureMapUpdate\x12L\n" +
+	"\bcaptures\x18\x01 \x03(\v20.devices.InterfaceCaptureMapUpdate.CapturesEntryR\bcaptures\x1aS\n" +
+	"\rCapturesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
 	"\x05value\x18\x02 \x01(\v2\x16.devices.CaptureConfigR\x05value:\x028\x01\"\xd6\x05\n" +
 	"\x11GetDeviceResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
@@ -604,39 +623,40 @@ func file_devices_devices_proto_rawDescGZIP() []byte {
 	return file_devices_devices_proto_rawDescData
 }
 
-var file_devices_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_devices_devices_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_devices_devices_proto_goTypes = []any{
-	(*Empty)(nil),               // 0: devices.Empty
-	(*GetDeviceRequest)(nil),    // 1: devices.GetDeviceRequest
-	(*ListDevicesRequest)(nil),  // 2: devices.ListDevicesRequest
-	(*UpdateDeviceRequest)(nil), // 3: devices.UpdateDeviceRequest
-	(*CaptureConfig)(nil),       // 4: devices.CaptureConfig
-	(*InterfaceCaptureMap)(nil), // 5: devices.InterfaceCaptureMap
-	(*GetDeviceResponse)(nil),   // 6: devices.GetDeviceResponse
-	(*ListDevicesResponse)(nil), // 7: devices.ListDevicesResponse
-	nil,                         // 8: devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry
-	nil,                         // 9: devices.UpdateDeviceRequest.PreviousAssociationsEntry
-	nil,                         // 10: devices.InterfaceCaptureMap.CapturesEntry
-	nil,                         // 11: devices.GetDeviceResponse.InterfaceBpfAssociationsEntry
-	nil,                         // 12: devices.GetDeviceResponse.PreviousAssociationsEntry
+	(*Empty)(nil),                     // 0: devices.Empty
+	(*GetDeviceRequest)(nil),          // 1: devices.GetDeviceRequest
+	(*ListDevicesRequest)(nil),        // 2: devices.ListDevicesRequest
+	(*UpdateDeviceRequest)(nil),       // 3: devices.UpdateDeviceRequest
+	(*CaptureConfig)(nil),             // 4: devices.CaptureConfig
+	(*InterfaceCaptureMap)(nil),       // 5: devices.InterfaceCaptureMap
+	(*InterfaceCaptureMapUpdate)(nil), // 6: devices.InterfaceCaptureMapUpdate
+	(*GetDeviceResponse)(nil),         // 7: devices.GetDeviceResponse
+	(*ListDevicesResponse)(nil),       // 8: devices.ListDevicesResponse
+	nil,                               // 9: devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry
+	nil,                               // 10: devices.InterfaceCaptureMap.CapturesEntry
+	nil,                               // 11: devices.InterfaceCaptureMapUpdate.CapturesEntry
+	nil,                               // 12: devices.GetDeviceResponse.InterfaceBpfAssociationsEntry
+	nil,                               // 13: devices.GetDeviceResponse.PreviousAssociationsEntry
 }
 var file_devices_devices_proto_depIdxs = []int32{
-	8,  // 0: devices.UpdateDeviceRequest.interface_bpf_associations:type_name -> devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry
-	9,  // 1: devices.UpdateDeviceRequest.previous_associations:type_name -> devices.UpdateDeviceRequest.PreviousAssociationsEntry
-	10, // 2: devices.InterfaceCaptureMap.captures:type_name -> devices.InterfaceCaptureMap.CapturesEntry
-	11, // 3: devices.GetDeviceResponse.interface_bpf_associations:type_name -> devices.GetDeviceResponse.InterfaceBpfAssociationsEntry
-	12, // 4: devices.GetDeviceResponse.previous_associations:type_name -> devices.GetDeviceResponse.PreviousAssociationsEntry
-	6,  // 5: devices.ListDevicesResponse.devices:type_name -> devices.GetDeviceResponse
-	5,  // 6: devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry.value:type_name -> devices.InterfaceCaptureMap
-	5,  // 7: devices.UpdateDeviceRequest.PreviousAssociationsEntry.value:type_name -> devices.InterfaceCaptureMap
-	4,  // 8: devices.InterfaceCaptureMap.CapturesEntry.value:type_name -> devices.CaptureConfig
+	9,  // 0: devices.UpdateDeviceRequest.interface_bpf_associations:type_name -> devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry
+	10, // 1: devices.InterfaceCaptureMap.captures:type_name -> devices.InterfaceCaptureMap.CapturesEntry
+	11, // 2: devices.InterfaceCaptureMapUpdate.captures:type_name -> devices.InterfaceCaptureMapUpdate.CapturesEntry
+	12, // 3: devices.GetDeviceResponse.interface_bpf_associations:type_name -> devices.GetDeviceResponse.InterfaceBpfAssociationsEntry
+	13, // 4: devices.GetDeviceResponse.previous_associations:type_name -> devices.GetDeviceResponse.PreviousAssociationsEntry
+	7,  // 5: devices.ListDevicesResponse.devices:type_name -> devices.GetDeviceResponse
+	6,  // 6: devices.UpdateDeviceRequest.InterfaceBpfAssociationsEntry.value:type_name -> devices.InterfaceCaptureMapUpdate
+	4,  // 7: devices.InterfaceCaptureMap.CapturesEntry.value:type_name -> devices.CaptureConfig
+	4,  // 8: devices.InterfaceCaptureMapUpdate.CapturesEntry.value:type_name -> devices.CaptureConfig
 	5,  // 9: devices.GetDeviceResponse.InterfaceBpfAssociationsEntry.value:type_name -> devices.InterfaceCaptureMap
 	5,  // 10: devices.GetDeviceResponse.PreviousAssociationsEntry.value:type_name -> devices.InterfaceCaptureMap
 	1,  // 11: devices.DevicesService.Get:input_type -> devices.GetDeviceRequest
 	2,  // 12: devices.DevicesService.List:input_type -> devices.ListDevicesRequest
 	3,  // 13: devices.DevicesService.Update:input_type -> devices.UpdateDeviceRequest
-	6,  // 14: devices.DevicesService.Get:output_type -> devices.GetDeviceResponse
-	7,  // 15: devices.DevicesService.List:output_type -> devices.ListDevicesResponse
+	7,  // 14: devices.DevicesService.Get:output_type -> devices.GetDeviceResponse
+	8,  // 15: devices.DevicesService.List:output_type -> devices.ListDevicesResponse
 	0,  // 16: devices.DevicesService.Update:output_type -> devices.Empty
 	14, // [14:17] is the sub-list for method output_type
 	11, // [11:14] is the sub-list for method input_type
@@ -656,7 +676,7 @@ func file_devices_devices_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devices_devices_proto_rawDesc), len(file_devices_devices_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
