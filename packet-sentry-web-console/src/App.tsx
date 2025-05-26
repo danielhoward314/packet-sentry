@@ -30,6 +30,7 @@ import { AxiosInterceptorProvider } from "@/contexts/AxiosProvider";
 import UpdateAdministrator from "./pages/UpdateAdministrator";
 import ActivateAdministrator from "./pages/ActivateAdministrator";
 import UpdateDevice from "./pages/UpdateDevice";
+import DeviceEvents from "./pages/DeviceEvents";
 
 function App() {
   return (
@@ -108,6 +109,7 @@ function App() {
                 <Route path="settings" element={<Settings />} />
                 <Route path="reset-password" element={<ResetPassword />} />
                 <Route path="logout" element={<Logout />} />
+                <Route path="events/:deviceId" element={<DeviceEvents />} />
               </Route>
             </Routes>
           </Router>

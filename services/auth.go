@@ -22,7 +22,7 @@ const (
 	svcNameAuth = "auth"
 )
 
-// authService implements the account gRPC service
+// authService implements the auth gRPC service
 type authService struct {
 	pbAuth.UnimplementedAuthServiceServer
 	datastore             *dao.Datastore

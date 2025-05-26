@@ -23,7 +23,7 @@ const (
 	svcNameAccounts = "accounts"
 )
 
-// accountsService implements the account gRPC service
+// accountsService implements the accounts gRPC service
 type accountsService struct {
 	pbAccounts.UnimplementedAccountsServiceServer
 	datastore             *dao.Datastore

@@ -170,3 +170,14 @@ export interface UpdateDeviceRequest {
   clientCertFingerprint: string;
   interfaceBpfAssociations?: Record<string, InterfaceCaptureMap>;
 }
+
+export interface GetPacketEventResponse {
+  event_time: string;
+  bpf: string;
+  original_length: number;
+  ip_src: string;
+  ip_dst: string;
+  tcp_src_port: number;
+  tcp_dst_port: number;
+  ip_version: string;
+}

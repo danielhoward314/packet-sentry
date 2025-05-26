@@ -9,6 +9,15 @@ const breadcrumbMap: Record<string, { label: string; href?: string }[]> = {
     { label: "Device Management", href: "/devices/new" },
     { label: "New Device" },
   ],
+  "/devices/update": [
+    { label: "Device Management" },
+    { label: "Update Device" },
+  ],
+  "/events": [
+    { label: "Device Management" },
+    { label: "Existing Devices" },
+    { label: "View Events" },
+  ],
   "/logout": [{ label: "Logout", href: "/logout" }],
   "/settings": [{ label: "Settings", href: "/settings" }],
 };

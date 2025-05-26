@@ -20,7 +20,7 @@ const (
 	svcNameDevices = "devices"
 )
 
-// devicesService implements the organizations gRPC service
+// devicesService implements the devices gRPC service
 type devicesService struct {
 	pbDevices.UnimplementedDevicesServiceServer
 	datastore *dao.Datastore
@@ -238,7 +238,7 @@ func (ds *devicesService) Update(ctx context.Context, request *pbDevices.UpdateD
 				Bpf:         pbCaptureConfig.Bpf,
 				DeviceName:  pbCaptureConfig.DeviceName,
 				Promiscuous: pbCaptureConfig.Promiscuous,
-				SnapLen:     int32(pbCaptureConfig.SnapLen),
+				SnapLen:     int32(65535),
 			}
 		}
 	}

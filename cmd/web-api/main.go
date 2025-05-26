@@ -27,6 +27,7 @@ import (
 	pbAdministrators "github.com/danielhoward314/packet-sentry/protogen/golang/administrators"
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
+	pbEvents "github.com/danielhoward314/packet-sentry/protogen/golang/events"
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 	"github.com/danielhoward314/packet-sentry/services"
 )
@@ -60,6 +61,22 @@ func main() {
 		log.Fatal("Error connecting to the postgres:", err)
 	}
 	defer db.Close()
+
+	timescaleDBHost := os.Getenv("TSDB_HOST")
+	timescaleDBPort := os.Getenv("TSDB_PORT")
+	timescaleDBUser := os.Getenv("TSDB_USER")
+	timescaleDBPassword := os.Getenv("TSDB_PASSWORD")
+	timescaleDBName := os.Getenv("TSDB_DATABASE")
+	timescaleDBSSLMode := os.Getenv("TSDB_SSLMODE")
+	timescaleDBConnStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		timescaleDBHost, timescaleDBPort, timescaleDBUser, timescaleDBPassword, timescaleDBName, timescaleDBSSLMode,
+	)
+	timescaleDB, err := sql.Open("postgres", timescaleDBConnStr)
+	if err != nil {
+		log.Fatal("Error connecting to TimescaleDB:", err)
+	}
+	defer timescaleDB.Close()
 
 	logger.Info("connecting to redis")
 	redisHost := os.Getenv("REDIS_HOST")
@@ -116,6 +133,7 @@ func main() {
 	}
 
 	datastore := psPostgres.NewDatastore(db, installKeySecret)
+	timescaleDatastore := psPostgres.NewTimescaleDatastore(timescaleDB)
 	registrationDatastore := psRedis.NewRegistrationDatastore(redisClient)
 	tokenDatastore := psRedis.NewTokenDatastore(redisClient, accessTokenJWTSecret, refreshTokenSecret)
 
@@ -180,11 +198,17 @@ func main() {
 		logger,
 	)
 
+	eventsSvc := services.NewEventsService(
+		timescaleDatastore,
+		logger,
+	)
+
 	pbAccounts.RegisterAccountsServiceServer(server, accountSvc)
 	pbAdministrators.RegisterAdministratorsServiceServer(server, administratorsSvc)
 	pbAuth.RegisterAuthServiceServer(server, authSvc)
 	pbOrgs.RegisterOrganizationsServiceServer(server, organizationsSvc)
 	pbDevices.RegisterDevicesServiceServer(server, devicesSvc)
+	pbEvents.RegisterEventsServiceServer(server, eventsSvc)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup

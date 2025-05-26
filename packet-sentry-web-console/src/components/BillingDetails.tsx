@@ -200,7 +200,6 @@ export function BillingDetails({
   const handleBillingFormSave = (values: z.infer<typeof billingFormSchema>) => {
     const formData = new FormData();
     for (const key in values) {
-      console.log(key, values[key]);
       formData.append(key, values[key]);
     }
 
@@ -214,7 +213,6 @@ export function BillingDetails({
   ) => {
     const formData = new FormData();
     for (const key in values) {
-      console.log(key, values[key]);
       formData.append(key, values[key]);
     }
 

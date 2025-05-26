@@ -75,3 +75,10 @@ export async function updateDevice(
 ): Promise<AxiosResponse<void>> {
   return baseClient.put(`/devices/${id}`, request);
 }
+
+export async function getEvents(deviceId: string, start: string, end: string): Promise<any> {
+  const res = await baseClient.get(
+    `/events/${deviceId}?start=${start}&end=${end}`,
+  );
+  return res.data;
+}

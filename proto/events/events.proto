@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package events;
+
+option go_package = "github.com/danielhoward314/packet-sentry/protogen/golang/events";
+
+import "google/api/annotations.proto";
+
+service EventsService {
+    rpc Get(GetEventsRequest) returns (GetEventsResponse) {
+        option (google.api.http) = {
+            get: "/v1/events/{device_id}"
+        };
+    }
+}
+
+message GetEventsRequest {
+    string device_id = 1;
+    string start = 2;
+    string end = 3;
+}
+
+message Event {
+    string event_time = 1;
+    string bpf = 2;
+    int32 original_length = 3;
+    string ip_src = 4;
+    string ip_dst = 5;
+    string tcp_src_port = 6;
+    string tcp_dst_port = 7;
+    string ip_version = 8;
+}
+
+message GetEventsResponse {
+    repeated Event events = 1;
+}

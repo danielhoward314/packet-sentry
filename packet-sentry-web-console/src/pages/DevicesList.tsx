@@ -6,7 +6,6 @@ export default function DevicesListPage() {
     <MainContentCardLayout
       cardDescription="The Packet Sentry Agent is installed on and reporting telemetry from these devices."
       cardTitle="Devices"
-      cardFullWidth
     >
       <DevicesTable />
     </MainContentCardLayout>

@@ -22,6 +22,7 @@ import (
 	pbAdministrators "github.com/danielhoward314/packet-sentry/protogen/golang/administrators"
 	pbAuth "github.com/danielhoward314/packet-sentry/protogen/golang/auth"
 	pbDevices "github.com/danielhoward314/packet-sentry/protogen/golang/devices"
+	pbEvents "github.com/danielhoward314/packet-sentry/protogen/golang/events"
 	pbOrgs "github.com/danielhoward314/packet-sentry/protogen/golang/organizations"
 	psWebSockets "github.com/danielhoward314/packet-sentry/websockets"
 )
@@ -86,6 +87,12 @@ func main() {
 	err = pbDevices.RegisterDevicesServiceHandler(ctx, mux, conn)
 	if err != nil {
 		log.Fatalf("failed to register the devices service handler: %v", err)
+	}
+
+	logger.Info("registering events service on gateway mux")
+	err = pbEvents.RegisterEventsServiceHandler(ctx, mux, conn)
+	if err != nil {
+		log.Fatalf("failed to register the events service handler: %v", err)
 	}
 
 	redisHost := os.Getenv("REDIS_HOST")

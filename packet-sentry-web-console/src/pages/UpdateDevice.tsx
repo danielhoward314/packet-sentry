@@ -62,8 +62,6 @@ export default function UpdateDevicePage() {
       ...prev,
       [editingInterface]: bpfInput.trim(),
     }));
-
-    console.log(`Staged BPF for ${editingInterface}: ${bpfInput}`);
     setEditingInterface(null);
     setBpfInput("");
   };

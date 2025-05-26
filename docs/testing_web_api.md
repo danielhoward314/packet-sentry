@@ -172,19 +172,33 @@ This API should persist an install key associated with this administrator and re
 
 ### GET /v1/devices/{id}
 
+```bash
 curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/devices/<device-id> \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>"
+```
 
 ### GET /v1/devices
 
+```bash
 curl --cacert ./certs/ca.cert.pem -X GET https://gateway.packet-sentry.local:8080/v1/devices?organizationId=<org-id> \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>"
+```
 
 ### PUT /v1/devices/{id}
 
+```bash
 curl --cacert ./certs/ca.cert.pem -X PUT https://gateway.packet-sentry.local:8080/v1/devices/750baff0-8c7f-4982-a0c8-04e415adfdae \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <api-access-token>" \
     -d '{"pcapVersion": "<version>", "clientCertPem": "<cert-pem>", "clientCertFingerprint": "<fingerprint>", "interfaces": ["<interface-name>"], "interface_bpf_associations": {"lo": {"captures": {"tcp port 3000": {"bpf": "tcp port 3000", "deviceName": "lo", "snaplen": 65535}}}}}'
+```
+
+### GET /v1/events/{deviceId}
+
+```bash
+curl --cacert ./certs/ca.cert.pem -X GET "https://gateway.packet-sentry.local:8080/v1/events/<device-id>?start=2025-05-26T01:00:00.000Z&end=2025-05-26T03:02:00.000Z" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <api-access-token>"
+```

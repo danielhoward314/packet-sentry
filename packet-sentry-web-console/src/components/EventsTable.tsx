@@ -1,6 +1,5 @@
-"use client";
-
 import * as React from "react";
+// import { format } from "date-fns";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,23 +12,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  AlertCircle,
-  ChevronDown,
-  Loader2,
-  MoreHorizontal,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { AlertCircle, ArrowUpDown, ChevronDown, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -41,14 +30,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listDevices } from "@/lib/api";
-import { GetDeviceResponse } from "@/types/api";
-import { useAdminUser } from "@/contexts/AdminUserContext";
-import { useNavigate } from "react-router-dom";
+import { DatetimeRangeQuery } from "@/pages/DeviceEvents";
+import { GetPacketEventResponse } from "@/types/api";
+import { getEvents } from "@/lib/api";
 
-export function DevicesTable() {
-  const navigate = useNavigate();
-  const { adminUser, refreshAdminUser } = useAdminUser();
+interface EventsTableProps {
+  datetimeQuery: DatetimeRangeQuery;
+  deviceId: string;
+}
+
+export function EventsTable({ datetimeQuery, deviceId }: EventsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -56,119 +47,80 @@ export function DevicesTable() {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
-  const [data, setData] = React.useState<GetDeviceResponse[]>([]);
+  const [data, setData] = React.useState<GetPacketEventResponse[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!adminUser?.id) {
-      refreshAdminUser();
-      if (!adminUser?.id) {
-        console.error("admin user not in context after refresh");
-        return;
-      }
+    if (!deviceId || !datetimeQuery?.start || !datetimeQuery?.end) {
+      setLoading(false);
+      return;
     }
+
+    setLoading(true);
 
     const fetchData = async () => {
       try {
-        const responseData = await listDevices(adminUser.organizationId);
-        setData(responseData?.devices ?? []);
+        const start = datetimeQuery?.start
+          ? datetimeQuery?.start?.toISOString()
+          : "";
+        const end = datetimeQuery?.end ? datetimeQuery?.end.toISOString() : "";
+        const responseData = await getEvents(deviceId, start, end);
+
+        setData(responseData?.events ?? []);
+        setError(null);
       } catch (err) {
-        setError("Failed to load devices.");
         console.error(err);
+        setError("Failed to load events.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [adminUser?.organizationId]);
+  }, [deviceId, datetimeQuery.start, datetimeQuery.end]);
 
-  const columns: ColumnDef<GetDeviceResponse>[] = [
+  const columns: ColumnDef<GetPacketEventResponse>[] = [
     {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
+      accessorKey: "eventTime",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Event Time
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
       ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
+      cell: ({ row }) => (<div>{row.getValue("eventTime")}</div>)
     },
     {
-      accessorKey: "osUniqueIdentifier",
-      header: "OS UID",
-      cell: ({ row }) => <div>{row.getValue("osUniqueIdentifier")}</div>,
+      accessorKey: "bpf",
+      header: "BPF",
     },
     {
-      accessorKey: "pcapVersion",
-      header: "pcap Version",
-      cell: ({ row }) => <div>{row.getValue("pcapVersion")}</div>,
+      accessorKey: "originalLength",
+      header: "Length (Bytes)",
     },
     {
-      accessorKey: "interfaces",
-      header: "Interfaces",
-      cell: ({ row }) => {
-        const interfaces = row.getValue("interfaces") as string[];
-
-        return (
-          <div className="flex flex-wrap gap-2">
-            {interfaces.length > 0 ? (
-              interfaces.map((iface, idx) => (
-                <Badge key={idx} variant="outline">
-                  {iface}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-muted-foreground italic">-</span>
-            )}
-          </div>
-        );
-      },
+      accessorKey: "ipSrc",
+      header: "IP Source",
     },
     {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const device = row.original;
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => navigate(`/devices/update/${device.id}`)}
-              >
-                Edit Configuration
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigate(`/events/${device.osUniqueIdentifier}`)}
-              >
-                View Events
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
+      accessorKey: "ipDst",
+      header: "IP Destination",
+    },
+    {
+      accessorKey: "tcpSrcPort",
+      header: "Src Port",
+    },
+    {
+      accessorKey: "tcpDstPort",
+      header: "Dst Port",
+    },
+    {
+      accessorKey: "ipVersion",
+      header: "IP Version",
     },
   ];
 
@@ -204,7 +156,8 @@ export function DevicesTable() {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
-          Failed to load devices in your organization.
+          Failed to load events for{" "}
+          {deviceId ? `device with OS unique id ${deviceId}` : "this device"}.
         </AlertDescription>
       </Alert>
     );
@@ -214,7 +167,7 @@ export function DevicesTable() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter device names..."
+          placeholder="Filter BPF expressions..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)
