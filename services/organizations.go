@@ -82,13 +82,7 @@ func (os *organizationsService) Update(ctx context.Context, request *pbOrgs.Upda
 	if request.BillingPlan != "" {
 		org.BillingPlanType = request.BillingPlan
 	}
-	os.logger.Info("request.PaymentDetails.CardName", "request.PaymentDetails.CardName", request.PaymentDetails.CardName)
-	os.logger.Info("request.PaymentDetails.AddressLineOne", "request.PaymentDetails.AddressLineOne", request.PaymentDetails.AddressLineOne)
-	os.logger.Info("request.PaymentDetails.AddressLineTwo", "request.PaymentDetails.AddressLineTwo", request.PaymentDetails.AddressLineTwo)
-	os.logger.Info("request.PaymentDetails.CardNumber", "request.PaymentDetails.CardNumber", request.PaymentDetails.CardNumber)
-	os.logger.Info("request.PaymentDetails.ExpirationMonth", "request.PaymentDetails.ExpirationMonth", request.PaymentDetails.ExpirationMonth)
-	os.logger.Info("request.PaymentDetails.ExpirationYear", "request.PaymentDetails.ExpirationYear", request.PaymentDetails.ExpirationYear)
-	os.logger.Info("request.PaymentDetails.Cvc", "request.PaymentDetails.Cvc", request.PaymentDetails.Cvc)
+
 	if request.PaymentDetails != nil {
 		if request.PaymentDetails.CardName == "" {
 			os.logger.Error("invalid payment details")

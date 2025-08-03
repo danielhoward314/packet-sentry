@@ -35,6 +35,8 @@ Or on Windows:
 .\scripts\generate_certs.ps1 # assumes openssl is installed and in PATH
 ```
 
+You have to trust the self-signed root CA at `./certs/ca.cert.pem`.
+
 Use docker compose to build the `agent-api`, `cli`, `gateway`, `web-api`, and `web-console` containers:
 
 ```
@@ -53,7 +55,7 @@ docker compose run --rm cli migrate up --timescale
 Run the built containers:
 
 ```
-docker compose --file compose.yml up agent-api gateway web-api web-console
+docker compose --file compose.yml up agent-api gateway web-api web-console worker
 ```
 
 The `web-console` container is an nginx server that serves the vite production build of the React SPA as static files.

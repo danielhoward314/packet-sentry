@@ -56,6 +56,8 @@ less +F /var/log/install.log
 less +F /var/log/packet-sentry-preinstall.log
 less +F /var/log/packet-sentry-postinstall.log
 
+cat /var/log/packet-sentry-agent.log
+
 sudo ls /opt/packet-sentry
 
 sudo launchctl list com.danielhoward314.packet-sentry-agent
